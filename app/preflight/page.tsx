@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   PreflightAnswers,
@@ -13,44 +13,6 @@ import {
 } from "../lib/session";
 
 const MMLU_SCORE_RAW = 76.89;
-
-const normalizeLikert = (value: number) => (value - 1) / 4;
-
-const triangle = (x: number, a: number, b: number, c: number) => {
-  if (a === b) {
-    if (x <= b) return 1;
-    if (x >= c) return 0;
-    return (c - x) / (c - b);
-  }
-  if (b === c) {
-    if (x >= b) return 1;
-    if (x <= a) return 0;
-    return (x - a) / (b - a);
-  }
-  if (x <= a || x >= c) return 0;
-  if (x === b) return 1;
-  if (x < b) return (x - a) / (b - a);
-  return (c - x) / (c - b);
-};
-
-const computeParams = (score: number): SessionParams => {
-  const low = triangle(score, 0, 0, 0.5);
-  const mid = triangle(score, 0, 0.5, 1);
-  const high = triangle(score, 0.5, 1, 1);
-  const total = low + mid + high || 1;
-
-  const baseRate = (low * 0.35 + mid * 0.55 + high * 0.75) / total;
-  const uncertainty = (low * 0.5 + mid * 0.3 + high * 0.15) / total;
-  const threshold = (low * 0.08 + mid * 0.12 + high * 0.18) / total;
-
-  return {
-    behaviorBaseRate: 0,
-    feedbackBaseRate: Number(baseRate.toFixed(3)),
-    physioBaseRate: Number(baseRate.toFixed(3)),
-    initialUncertainty: Number(uncertainty.toFixed(3)),
-    initialThreshold: Number(threshold.toFixed(3)),
-  };
-};
 
 const sendJSON = async (baseUrl: string, path: string, payload: unknown) => {
   const url = baseUrl ? `${baseUrl}${path}` : path;
@@ -81,21 +43,13 @@ export default function PreflightPage() {
     priorExperience: 2,
   });
   const [preflightScore, setPreflightScore] = useState<number | null>(null);
-  const [backendScore, setBackendScore] = useState<string>("Not run.");
+  const [preflightStatus, setPreflightStatus] = useState<string>("Not run.");
   const [params, setParams] = useState<SessionParams | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
     setSessionId(peekNextSessionId());
   }, []);
-
-  const normalizedScore = useMemo(() => {
-    const values = Object.values(preflight);
-    const normalized =
-      values.reduce((sum, value) => sum + normalizeLikert(value), 0) /
-      values.length;
-    return Number(normalized.toFixed(3));
-  }, [preflight]);
 
   const handleCompute = async () => {
     if (!sessionId) {
@@ -105,51 +59,61 @@ export default function PreflightPage() {
       setErrorMessage("Preflight is locked. Only session ID 1 can run it.");
       return;
     }
-    const computed = computeParams(normalizedScore);
-    setPreflightScore(normalizedScore);
-    setParams(computed);
-    setErrorMessage("");
 
     const baseUrl = backendBaseUrl.trim().replace(/\/$/, "");
     try {
-      const payload = {
-        humanInput: {
-          behaviorInputWeight: 0.55,
-          adopted: 0,
-          rejected: 0,
-          adoptionBaseRate: computed.behaviorBaseRate,
-          feedbackInputWeight: 0.25,
-          feedbackLikelihood: 0.7,
-          feedbackConfidence: 0.6,
-          feedbackBaseRate: computed.feedbackBaseRate,
-          physioInputWeight: 0.2,
-          physioLikelihood: 0.6,
-          physioConfidence: 0.5,
-          physioBaseRate: computed.physioBaseRate,
-        },
-        preflight,
-      };
-      const score = await sendJSON(
+      const response = await sendJSON(
         baseUrl,
-        "/cridit/evaluation/score/human/preflight",
-        payload,
+        "/cridit/preflight/params",
+        preflight,
       );
-      setBackendScore(Number(score).toFixed(3));
+      setPreflightScore(Number(response.preflightScore));
+      setParams({
+        behaviorBaseRate: Number(response.behaviorBaseRate),
+        feedbackBaseRate: Number(response.feedbackBaseRate),
+        physioBaseRate: Number(response.physioBaseRate),
+        initialUncertainty: Number(response.initialUncertainty),
+        initialThreshold: Number(response.initialThreshold),
+      });
+      setPreflightStatus(Number(response.preflightScore).toFixed(3));
+      setErrorMessage("");
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      setBackendScore(`Error: ${message}`);
+      setPreflightStatus(`Error: ${message}`);
     }
   };
 
-  const handleStartSession = () => {
+  const handleStartSession = async () => {
     if (!sessionId) {
       return;
     }
     let resolvedParams = params;
     let resolvedPreflightScore = preflightScore;
     if (!resolvedParams) {
-      resolvedPreflightScore = resolvedPreflightScore ?? 0.5;
-      resolvedParams = computeParams(resolvedPreflightScore);
+      const baseUrl = backendBaseUrl.trim().replace(/\/$/, "");
+      try {
+        const response = await sendJSON(
+          baseUrl,
+          "/cridit/preflight/params",
+          preflight,
+        );
+        resolvedPreflightScore = Number(response.preflightScore);
+        resolvedParams = {
+          behaviorBaseRate: Number(response.behaviorBaseRate),
+          feedbackBaseRate: Number(response.feedbackBaseRate),
+          physioBaseRate: Number(response.physioBaseRate),
+          initialUncertainty: Number(response.initialUncertainty),
+          initialThreshold: Number(response.initialThreshold),
+        };
+        setPreflightScore(resolvedPreflightScore);
+        setParams(resolvedParams);
+        setPreflightStatus(Number(response.preflightScore).toFixed(3));
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        setPreflightStatus(`Error: ${message}`);
+        setErrorMessage(message);
+        return;
+      }
     }
     if (sessionId !== "1") {
       const history = loadAdoptionHistory();
@@ -333,7 +297,7 @@ export default function PreflightPage() {
                 Compute Initial Parameters
               </button>
             </div>
-            <p className="status">Preflight score: {backendScore}</p>
+            <p className="status">Preflight score: {preflightStatus}</p>
             {errorMessage ? <p className="status">{errorMessage}</p> : null}
           </section>
         ) : null}
