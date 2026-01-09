@@ -333,10 +333,7 @@ export default function PreflightPage() {
                 Compute Initial Parameters
               </button>
             </div>
-            <p className="status">
-              Preflight score (normalized): {normalizedScore}
-            </p>
-            <p className="status">Backend preflight score: {backendScore}</p>
+            <p className="status">Preflight score: {backendScore}</p>
             {errorMessage ? <p className="status">{errorMessage}</p> : null}
           </section>
         ) : null}
