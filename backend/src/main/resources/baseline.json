@@ -1,0 +1,29 @@
+[
+  {
+    "taskId": "task-demo",
+    "domain": "mental health",
+    "modelMethod": "pcr5",
+    "evidenceSet": [
+      {
+        "evidenceKey": "mmlu",
+        "trustworthyMass": 0.615,
+        "untrustworthyMass": 0.185,
+        "uncertaintyMass": 0.2
+      }
+    ],
+    "evidenceWeights": [
+      {
+        "evidenceKey": "mmlu",
+        "weight": 1.0
+      }
+    ],
+    "threats": [
+      {
+        "id": "prompt-injection",
+        "description": "User prompt injection leads to unsafe or misleading responses.",
+        "likelihood": 0.3,
+        "weight": 1.0
+      }
+    ]
+  }
+]
