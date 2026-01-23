@@ -3,9 +3,7 @@ package cridit.riskAnalysis;
 import cridit.machineSide.Evidence;
 import jakarta.enterprise.context.ApplicationScoped;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @ApplicationScoped
 public class RiskAnalysis {
@@ -21,47 +19,34 @@ public class RiskAnalysis {
         return threatMean * vulnerabilityMean;
     }
 
-    public double meanVulnerabilityFromEvidence(List<Evidence> evidenceSet, List<Evidence.Weight> weights) {
+    public double meanVulnerabilityFromEvidence(List<Evidence> evidenceSet) {
         if (evidenceSet == null || evidenceSet.isEmpty()) {
             throw new IllegalArgumentException("Evidence must be provided to compute vulnerability");
         }
-        Map<String, Double> weightByKey = new HashMap<>();
-        if (weights != null) {
-            for (Evidence.Weight weight : weights) {
-                if (weight == null) {
-                    continue;
-                }
-                validateWeight(weight.weight(), "evidence.weight");
-                weightByKey.put(weight.evidenceKey(), weight.weight());
-            }
-        }
 
-        double sumWeights = 0.0;
         double sum = 0.0;
+        int count = 0;
         for (Evidence evidence : evidenceSet) {
             if (evidence == null) {
                 continue;
             }
-            double weight = weightByKey.getOrDefault(evidence.evidenceKey(), 1.0);
-            validateWeight(weight, "evidence.weight");
             double vulnerability = clamp(evidence.uncertaintyMass() + evidence.untrustworthyMass());
-            sumWeights += weight;
-            sum += weight * vulnerability;
+            sum += vulnerability;
+            count++;
         }
-        if (sumWeights == 0.0) {
-            throw new IllegalArgumentException("Evidence weights must sum to a positive value");
+        if (count == 0) {
+            throw new IllegalArgumentException("Evidence must be provided to compute vulnerability");
         }
-        return sum / sumWeights;
+        return sum / count;
     }
 
     public double riskFromThreatsAndEvidence(List<Threat> threats,
-                                             List<Evidence> evidenceSet,
-                                             List<Evidence.Weight> weights) {
+                                             List<Evidence> evidenceSet) {
         if (threats == null || threats.isEmpty()) {
             throw new IllegalArgumentException("Threats must be provided to compute risk");
         }
         double threatMean = weightedMeanThreats(threats);
-        double vulnerability = meanVulnerabilityFromEvidence(evidenceSet, weights);
+        double vulnerability = meanVulnerabilityFromEvidence(evidenceSet);
         return threatMean * vulnerability;
     }
 

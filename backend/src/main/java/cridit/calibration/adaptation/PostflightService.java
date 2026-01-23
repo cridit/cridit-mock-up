@@ -14,17 +14,13 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @ApplicationScoped
 public class PostflightService {
     private static final double DEFAULT_HUMAN_SCORE = 0.5;
-    private static final double WEIGHT_BOOST = 0.05;
-
     private final MachineSideTrustEvaluation machineSideTrustEvaluation;
     private final Map<String, PostflightSummary> summaries = new ConcurrentHashMap<>();
 
@@ -36,11 +32,9 @@ public class PostflightService {
     public PostflightSummary submit(PostflightRequest request) {
         EvidenceRequest metrics = request.evidenceRequest();
         List<Evidence> evidenceSet = metrics == null ? Collections.emptyList() : safeEvidence(metrics.evidenceSet());
-        List<Evidence.Weight> baseWeights = metrics == null ? Collections.emptyList() : safeWeights(metrics.evidenceWeights());
         List<String> factors = request.feedbackInput() == null ? Collections.emptyList() : safeFactors(request.feedbackInput());
-        List<Evidence.Weight> updatedWeights = updateWeights(evidenceSet, baseWeights, factors);
 
-        double machineScore = resolveMachineTrustScore(request.conflictRedistribution(), evidenceSet, updatedWeights);
+        double machineScore = resolveMachineTrustScore(request.conflictRedistribution(), evidenceSet);
         double humanScore = computeHumanTrustScore(request.feedbackInput(), request.surveyInput());
 
         PostflightSummary summary = new PostflightSummary(
@@ -48,7 +42,6 @@ public class PostflightService {
                 request.participantId(),
                 machineScore,
                 humanScore,
-                updatedWeights,
                 factors,
                 Instant.now().toString(),
                 null,
@@ -85,7 +78,6 @@ public class PostflightService {
                 existing.participantId(),
                 existing.machineTrustScore(),
                 existing.humanTrustScore(),
-                existing.updatedWeights(),
                 existing.trustFactors(),
                 existing.timestamp(),
                 decision,
@@ -118,107 +110,17 @@ public class PostflightService {
         return evidenceSet == null ? Collections.emptyList() : evidenceSet;
     }
 
-    private List<Evidence.Weight> safeWeights(List<Evidence.Weight> weights) {
-        return weights == null ? Collections.emptyList() : weights;
-    }
-
     private List<String> safeFactors(FrontendFeedbackInput input) {
         List<String> factors = input.trustFactors();
         return factors == null ? Collections.emptyList() : factors;
     }
 
-    private List<Evidence.Weight> updateWeights(List<Evidence> evidenceSet,
-                                                List<Evidence.Weight> baseWeights,
-                                                List<String> factors) {
-        if (evidenceSet.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        Map<String, Double> weightByKey = new HashMap<>();
-        for (Evidence evidence : evidenceSet) {
-            weightByKey.put(evidence.evidenceKey(), 1.0);
-        }
-        for (Evidence.Weight weight : baseWeights) {
-            if (weight != null && weightByKey.containsKey(weight.evidenceKey())) {
-                weightByKey.put(weight.evidenceKey(), weight.weight());
-            }
-        }
-
-        if (!factors.isEmpty()) {
-            Map<String, List<String>> factorMapping = buildFactorMapping();
-            for (String rawFactor : factors) {
-                if (rawFactor == null || rawFactor.isBlank()) {
-                    continue;
-                }
-                String factor = rawFactor.trim().toLowerCase(Locale.ROOT);
-                List<String> mappedKeys = factorMapping.getOrDefault(factor, List.of(factor));
-                List<String> matched = new ArrayList<>();
-                for (String key : weightByKey.keySet()) {
-                    String normalizedKey = key.toLowerCase(Locale.ROOT);
-                    for (String mapped : mappedKeys) {
-                        if (normalizedKey.contains(mapped)) {
-                            matched.add(key);
-                            break;
-                        }
-                    }
-                }
-                if (matched.isEmpty()) {
-                    double boost = WEIGHT_BOOST / weightByKey.size();
-                    for (String key : weightByKey.keySet()) {
-                        weightByKey.put(key, weightByKey.get(key) + boost);
-                    }
-                } else {
-                    for (String key : matched) {
-                        weightByKey.put(key, weightByKey.get(key) + WEIGHT_BOOST);
-                    }
-                }
-            }
-        }
-
-        normalizeWeights(weightByKey);
-
-        List<Evidence.Weight> updated = new ArrayList<>();
-        for (Map.Entry<String, Double> entry : weightByKey.entrySet()) {
-            updated.add(new Evidence.Weight(entry.getKey(), entry.getValue()));
-        }
-        return updated;
-    }
-
-    private Map<String, List<String>> buildFactorMapping() {
-        Map<String, List<String>> mapping = new HashMap<>();
-        mapping.put("reliability", List.of("reliability", "accuracy", "mmlu", "performance"));
-        mapping.put("transparency", List.of("transparency", "explainability"));
-        mapping.put("security", List.of("security", "robustness", "safety"));
-        mapping.put("privacy", List.of("privacy"));
-        mapping.put("humanness", List.of("humanness", "human", "empathy"));
-        mapping.put("empathy", List.of("empathy", "humanness", "human"));
-        return mapping;
-    }
-
-    private void normalizeWeights(Map<String, Double> weightByKey) {
-        double sum = 0.0;
-        for (double value : weightByKey.values()) {
-            sum += value;
-        }
-        if (sum <= 0.0) {
-            double equal = 1.0 / weightByKey.size();
-            for (String key : weightByKey.keySet()) {
-                weightByKey.put(key, equal);
-            }
-            return;
-        }
-        for (String key : weightByKey.keySet()) {
-            weightByKey.put(key, weightByKey.get(key) / sum);
-        }
-    }
-
     private double resolveMachineTrustScore(String conflictRedistribution,
-                                            List<Evidence> evidenceSet,
-                                            List<Evidence.Weight> evidenceWeights) {
+                                            List<Evidence> evidenceSet) {
         if (evidenceSet == null || evidenceSet.isEmpty()) {
             return 0.0;
         }
-        return machineSideTrustEvaluation.getMachineTrustScore(evidenceSet, evidenceWeights);
+        return machineSideTrustEvaluation.getMachineTrustScore(evidenceSet);
     }
 
     private double computeHumanTrustScore(FrontendFeedbackInput feedbackInput, PostflightSurveyInput surveyInput) {
