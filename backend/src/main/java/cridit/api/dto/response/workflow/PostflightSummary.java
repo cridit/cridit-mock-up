@@ -1,7 +1,5 @@
 package cridit.api.dto.response.workflow;
 
-import cridit.machineSide.Evidence;
-
 import java.util.List;
 
 public record PostflightSummary(
@@ -9,7 +7,6 @@ public record PostflightSummary(
         String participantId,
         double machineTrustScore,
         double humanTrustScore,
-        List<Evidence.Weight> updatedWeights,
         List<String> trustFactors,
         String timestamp,
         String calibrationDecision,

@@ -20,224 +20,170 @@ const trustFactorsByScenario: Record<
   Array<{
     key: string;
     label: string;
-    trustworthy: number;
-    untrustworthy: number;
-    uncertainty: number;
-    weight: number;
+    polarity: "POSITIVE" | "NEGATIVE";
+    severity: number;
   }>
 > = {
   financial: [
     {
-      key: "calculation_accuracy",
+      key: "CALCULATION_ACCURACY",
       label: "Calculation accuracy",
-      trustworthy: 0.6,
-      untrustworthy: 0.2,
-      uncertainty: 0.2,
-      weight: 1.0,
+      polarity: "POSITIVE",
+      severity: 0.6,
     },
     {
-      key: "consistency",
+      key: "CONSISTENCY",
       label: "Consistency across answers",
-      trustworthy: 0.6,
-      untrustworthy: 0.2,
-      uncertainty: 0.2,
-      weight: 1.0,
+      polarity: "POSITIVE",
+      severity: 0.6,
     },
     {
-      key: "assumption_transparency",
+      key: "ASSUMPTION_TRANSPARENCY",
       label: "Transparency of assumptions",
-      trustworthy: 0.6,
-      untrustworthy: 0.2,
-      uncertainty: 0.2,
-      weight: 1.0,
+      polarity: "POSITIVE",
+      severity: 0.6,
     },
     {
-      key: "traceability",
+      key: "TRACEABILITY",
       label: "Traceability",
-      trustworthy: 0.6,
-      untrustworthy: 0.2,
-      uncertainty: 0.2,
-      weight: 1.0,
+      polarity: "POSITIVE",
+      severity: 0.6,
     },
     {
-      key: "auditability",
+      key: "AUDITABILITY",
       label: "Auditability",
-      trustworthy: 0.6,
-      untrustworthy: 0.2,
-      uncertainty: 0.2,
-      weight: 1.0,
+      polarity: "POSITIVE",
+      severity: 0.6,
     },
     {
-      key: "source_grounding",
+      key: "SOURCE_GROUNDING",
       label: "Source grounding",
-      trustworthy: 0.6,
-      untrustworthy: 0.2,
-      uncertainty: 0.2,
-      weight: 1.0,
+      polarity: "POSITIVE",
+      severity: 0.6,
     },
     {
-      key: "risk_completeness",
+      key: "RISK_COMPLETENESS",
       label: "Risk completeness",
-      trustworthy: 0.6,
-      untrustworthy: 0.2,
-      uncertainty: 0.2,
-      weight: 1.0,
+      polarity: "POSITIVE",
+      severity: 0.6,
     },
     {
-      key: "professional_boundaries",
+      key: "PROFESSIONAL_BOUNDARIES",
       label: "Professional boundaries",
-      trustworthy: 0.6,
-      untrustworthy: 0.2,
-      uncertainty: 0.2,
-      weight: 1.0,
+      polarity: "POSITIVE",
+      severity: 0.6,
     },
   ],
   hiring: [
     {
-      key: "criteria_transparency",
+      key: "CRITERIA_TRANSPARENCY",
       label: "Transparency of selection criteria",
-      trustworthy: 0.6,
-      untrustworthy: 0.2,
-      uncertainty: 0.2,
-      weight: 1.0,
+      polarity: "POSITIVE",
+      severity: 0.6,
     },
     {
-      key: "explainability",
+      key: "EXPLAINABILITY",
       label: "Explainability of outputs",
-      trustworthy: 0.6,
-      untrustworthy: 0.2,
-      uncertainty: 0.2,
-      weight: 1.0,
+      polarity: "POSITIVE",
+      severity: 0.6,
     },
     {
-      key: "fairness",
+      key: "FAIRNESS",
       label: "Fairness / non-discrimination",
-      trustworthy: 0.6,
-      untrustworthy: 0.2,
-      uncertainty: 0.2,
-      weight: 1.0,
+      polarity: "POSITIVE",
+      severity: 0.6,
     },
     {
-      key: "classification_accuracy",
+      key: "CLASSIFICATION_ACCURACY",
       label: "Accuracy of CV classification",
-      trustworthy: 0.6,
-      untrustworthy: 0.2,
-      uncertainty: 0.2,
-      weight: 1.0,
+      polarity: "POSITIVE",
+      severity: 0.6,
     },
     {
-      key: "consistency",
+      key: "CONSISTENCY",
       label: "Consistency across candidates",
-      trustworthy: 0.6,
-      untrustworthy: 0.2,
-      uncertainty: 0.2,
-      weight: 1.0,
+      polarity: "POSITIVE",
+      severity: 0.6,
     },
     {
-      key: "feedback_quality",
+      key: "FEEDBACK_QUALITY",
       label: "Quality of feedback provided",
-      trustworthy: 0.6,
-      untrustworthy: 0.2,
-      uncertainty: 0.2,
-      weight: 1.0,
+      polarity: "POSITIVE",
+      severity: 0.6,
     },
     {
-      key: "tone_professionalism",
+      key: "TONE_PROFESSIONALISM",
       label: "Tone and professionalism",
-      trustworthy: 0.6,
-      untrustworthy: 0.2,
-      uncertainty: 0.2,
-      weight: 1.0,
+      polarity: "POSITIVE",
+      severity: 0.6,
     },
     {
-      key: "human_oversight",
+      key: "HUMAN_OVERSIGHT",
       label: "Respect of human oversight",
-      trustworthy: 0.6,
-      untrustworthy: 0.2,
-      uncertainty: 0.2,
-      weight: 1.0,
+      polarity: "POSITIVE",
+      severity: 0.6,
     },
     {
-      key: "efficiency",
+      key: "EFFICIENCY",
       label: "Efficiency / time saving",
-      trustworthy: 0.6,
-      untrustworthy: 0.2,
-      uncertainty: 0.2,
-      weight: 1.0,
+      polarity: "POSITIVE",
+      severity: 0.6,
     },
     {
-      key: "correction_ability",
+      key: "CORRECTION_ABILITY",
       label: "Ability to adjust or correct the system",
-      trustworthy: 0.6,
-      untrustworthy: 0.2,
-      uncertainty: 0.2,
-      weight: 1.0,
+      polarity: "POSITIVE",
+      severity: 0.6,
     },
   ],
   legal: [
     {
-      key: "reliability",
+      key: "RELIABILITY",
       label: "Reliability",
-      trustworthy: 0.6,
-      untrustworthy: 0.2,
-      uncertainty: 0.2,
-      weight: 1.0,
+      polarity: "POSITIVE",
+      severity: 0.6,
     },
     {
-      key: "citation_accuracy",
+      key: "CITATION_ACCURACY",
       label: "Citation accuracy",
-      trustworthy: 0.6,
-      untrustworthy: 0.2,
-      uncertainty: 0.2,
-      weight: 1.0,
+      polarity: "POSITIVE",
+      severity: 0.6,
     },
     {
-      key: "transparency",
+      key: "TRANSPARENCY",
       label: "Transparency of reasoning",
-      trustworthy: 0.6,
-      untrustworthy: 0.2,
-      uncertainty: 0.2,
-      weight: 1.0,
+      polarity: "POSITIVE",
+      severity: 0.6,
     },
     {
-      key: "bias_fairness",
+      key: "BIAS_FAIRNESS",
       label: "Bias avoidance and fairness",
-      trustworthy: 0.6,
-      untrustworthy: 0.2,
-      uncertainty: 0.2,
-      weight: 1.0,
+      polarity: "POSITIVE",
+      severity: 0.6,
     },
     {
-      key: "privacy_security",
+      key: "PRIVACY_SECURITY",
       label: "Security and confidentiality",
-      trustworthy: 0.6,
-      untrustworthy: 0.2,
-      uncertainty: 0.2,
-      weight: 1.0,
+      polarity: "POSITIVE",
+      severity: 0.6,
     },
     {
-      key: "human_oversight",
+      key: "HUMAN_OVERSIGHT",
       label: "Respect of human oversight",
-      trustworthy: 0.6,
-      untrustworthy: 0.2,
-      uncertainty: 0.2,
-      weight: 1.0,
+      polarity: "POSITIVE",
+      severity: 0.6,
     },
     {
-      key: "accountability",
+      key: "ACCOUNTABILITY",
       label: "Accountability",
-      trustworthy: 0.6,
-      untrustworthy: 0.2,
-      uncertainty: 0.2,
-      weight: 1.0,
+      polarity: "POSITIVE",
+      severity: 0.6,
     },
     {
-      key: "uncertainty_limits",
+      key: "UNCERTAINTY_LIMITS",
       label: "Explicit uncertainty and limits",
-      trustworthy: 0.6,
-      untrustworthy: 0.2,
-      uncertainty: 0.2,
-      weight: 1.0,
+      polarity: "POSITIVE",
+      severity: 0.6,
     },
   ],
 };
@@ -979,114 +925,98 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
 
     const wireEvidencePanel = () => {
       if (!isOperator) return;
-      const rows = Array.from(document.querySelectorAll(".evidence-row"));
+      const rows = Array.from(
+        document.querySelectorAll(".evidence-row[data-event-type]"),
+      );
       if (rows.length === 0) return;
 
-      const setWeightLabel = (row: Element, value: number) => {
-        const label = row.querySelector<HTMLElement>(".weight-label");
-        if (!label) return;
-        if (value >= 0.67) {
-          label.textContent = "High";
-        } else if (value >= 0.34) {
-          label.textContent = "Medium";
-        } else {
-          label.textContent = "Low";
+      const postEvent = async (payload: {
+        eventType: string;
+        polarity: "POSITIVE" | "NEGATIVE";
+        severity: number;
+      }) => {
+        const response = await fetch(`${chatBaseUrl}/cridit/machine/events`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionId: `${scenarioKey}-session`,
+            scenarioKey,
+            domain: scenarioKey,
+            baselineScore: scenarioRef.current.baselineMachine,
+            eventType: payload.eventType,
+            polarity: payload.polarity,
+            severity: payload.severity,
+            context: "MEDIUM",
+          }),
+        });
+        if (!response.ok) {
+          return null;
         }
+        return (await response.json()) as
+          | {
+              machineTrustScore?: number;
+            }
+          | null;
       };
 
-      const recalc = async () => {
-        const evidenceSet: Array<{
-          evidenceKey: string;
-          trustworthyMass: number;
-          untrustworthyMass: number;
-          uncertaintyMass: number;
-        }> = [];
-        const evidenceWeights: Array<{ evidenceKey: string; weight: number }> = [];
-
-        rows.forEach((row) => {
-          const key = (row as HTMLElement).dataset.evidenceKey;
-          if (!key) return;
-          const trustworthyInput = row.querySelector<HTMLInputElement>(
-            "input[data-field='trustworthy']",
-          );
-          const untrustworthyInput = row.querySelector<HTMLInputElement>(
-            "input[data-field='untrustworthy']",
-          );
-          const uncertaintyInput = row.querySelector<HTMLInputElement>(
-            "input[data-field='uncertainty']",
-          );
-          const weightRange = row.querySelector<HTMLInputElement>(
-            "input[data-field='weight-range']",
-          );
-
-          const trustworthy = clamp(Number(trustworthyInput?.value || 0), 0, 1);
-          const untrustworthy = clamp(Number(untrustworthyInput?.value || 0), 0, 1);
-          const uncertainty = clamp(Number(uncertaintyInput?.value || 0), 0, 1);
-          const weight = clamp(Number(weightRange?.value || 1), 0, 1);
-
-          evidenceSet.push({
-            evidenceKey: key,
-            trustworthyMass: trustworthy,
-            untrustworthyMass: untrustworthy,
-            uncertaintyMass: uncertainty,
-          });
-          evidenceWeights.push({ evidenceKey: key, weight });
-          setWeightLabel(row, weight);
-        });
-
-        try {
-          const response = await fetch(`${chatBaseUrl}/cridit/evaluation/score/machine`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ evidenceSet, evidenceWeights }),
-          });
-          if (!response.ok) return;
-          const score = await response.json();
-          const scoreText = typeof score === "number" ? score.toFixed(3) : "n/a";
-          const preview = document.getElementById("machine-score-preview");
-          if (preview) {
-            preview.textContent = scoreText;
+      const logEvents = async () => {
+        let lastScore: number | null = null;
+        for (const row of rows) {
+          const key = (row as HTMLElement).dataset.eventType;
+          if (!key) {
+            continue;
           }
-          setText("machine-trust", scoreText);
-          const humanText = document.getElementById("human-trust")?.textContent || "n/a";
-          if (humanText !== "n/a") {
-            updateTrustEvolution(humanText, scoreText);
+          const activeInput = row.querySelector<HTMLInputElement>(
+            "input[data-field='event-active']",
+          );
+          if (activeInput && !activeInput.checked) {
+            continue;
           }
-          if (humanText !== "n/a" && scoreText !== "n/a") {
-            const humanValue = Number(humanText);
-            const machineValue = Number(scoreText);
-            if (Number.isFinite(humanValue) && Number.isFinite(machineValue)) {
-              updateGapEvolution((humanValue - machineValue).toFixed(3));
+          const polarityInput = row.querySelector<HTMLSelectElement>(
+            "select[data-field='event-polarity']",
+          );
+          const severityInput = row.querySelector<HTMLInputElement>(
+            "input[data-field='event-severity']",
+          );
+          const polarity = (polarityInput?.value || "POSITIVE") as "POSITIVE" | "NEGATIVE";
+          const severity = clamp(Number(severityInput?.value || 0.5), 0, 1);
+          try {
+            const response = await postEvent({ eventType: key, polarity, severity });
+            if (response && typeof response.machineTrustScore === "number") {
+              lastScore = response.machineTrustScore;
             }
+          } catch {
+            // ignore per-event errors
           }
-          await recordCalibrationUpdate();
-        } catch {
-          // ignore errors
         }
+        if (lastScore === null) {
+          return;
+        }
+        const scoreText = lastScore.toFixed(3);
+        const preview = document.getElementById("machine-score-preview");
+        if (preview) {
+          preview.textContent = scoreText;
+        }
+        setText("machine-trust", scoreText);
+        const humanText = document.getElementById("human-trust")?.textContent || "n/a";
+        if (humanText !== "n/a") {
+          updateTrustEvolution(humanText, scoreText);
+        }
+        if (humanText !== "n/a") {
+          const humanValue = Number(humanText);
+          if (Number.isFinite(humanValue)) {
+            updateGapEvolution((humanValue - lastScore).toFixed(3));
+          }
+        }
+        await recordCalibrationUpdate();
       };
 
       const refreshButton = document.getElementById("refresh-machine-score");
       if (refreshButton) {
         refreshButton.addEventListener("click", () => {
-          recalc();
+          logEvents();
         });
       }
-
-      rows.forEach((row) => {
-        const weightRange = row.querySelector<HTMLInputElement>("input[data-field='weight-range']");
-        if (!weightRange) {
-          return;
-        }
-        const syncWeight = (value: number) => {
-          const clamped = clamp(value, 0, 1);
-          weightRange.value = clamped.toString();
-          setWeightLabel(row, clamped);
-        };
-        weightRange.addEventListener("input", () => {
-          syncWeight(Number(weightRange.value));
-        });
-        syncWeight(Number(weightRange.value || 1));
-      });
     };
 
     const wireHumanFeedbackPanel = () => {
@@ -1612,67 +1542,62 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
             {trustFactorsByScenario[scenario.key]?.length ? (
               <>
                 <p className="muted">
-                  Update masses and weights to recompute machine trust. Weights reflect factor
-                  salience (0–1 per factor). Current machine score:{" "}
+                  Log events to update machine trust. Each click adds events for every factor with
+                  the selected polarity and severity (0–1). Current machine score:{" "}
                   <strong id="machine-score-preview">n/a</strong>
                 </p>
                 <div className="evidence-table">
+                  <div className="evidence-row trust-event-row trust-event-header">
+                    <div className="evidence-label">Trust factor</div>
+                    <div className="evidence-label">Active</div>
+                    <div className="evidence-label">Polarity</div>
+                    <div className="evidence-label">Severity</div>
+                  </div>
                   {(trustFactorsByScenario[scenario.key] || []).map((factor) => (
-                    <div className="evidence-row" data-evidence-key={factor.key} key={factor.key}>
+                    <div className="evidence-row trust-event-row" data-event-type={factor.key} key={factor.key}>
                       <div className="evidence-label">{factor.label}</div>
-                      <label>
-                        Trustworthy
+                      <div
+                        className="d-flex align-items-center gap-2"
+                        style={{ whiteSpace: "nowrap" }}
+                      >
                         <input
+                          className="form-check-input m-0"
+                          type="checkbox"
+                          defaultChecked
+                          data-field="event-active"
+                          aria-label="Active"
+                        />
+                      </div>
+                      <div className="d-flex align-items-center gap-2">
+                        <select
+                          className="form-select"
+                          data-field="event-polarity"
+                          defaultValue={factor.polarity}
+                        >
+                          <option value="POSITIVE">Positive</option>
+                          <option value="NEGATIVE">Negative</option>
+                        </select>
+                      </div>
+                      <div className="d-flex align-items-center gap-2">
+                        <input
+                          className="form-control"
                           type="number"
                           min="0"
                           max="1"
                           step="0.01"
-                          defaultValue={factor.trustworthy}
-                          data-field="trustworthy"
+                          defaultValue={factor.severity}
+                          data-field="event-severity"
                         />
-                      </label>
-                      <label>
-                        Untrustworthy
-                        <input
-                          type="number"
-                          min="0"
-                          max="1"
-                          step="0.01"
-                          defaultValue={factor.untrustworthy}
-                          data-field="untrustworthy"
-                        />
-                      </label>
-                      <label>
-                        Uncertainty
-                        <input
-                          type="number"
-                          min="0"
-                          max="1"
-                          step="0.01"
-                          defaultValue={factor.uncertainty}
-                          data-field="uncertainty"
-                        />
-                      </label>
-                      <label>
-                        Weight <span className="weight-label">Medium</span>
-                        <input
-                          type="range"
-                          min="0"
-                          max="1"
-                          step="0.01"
-                          defaultValue={factor.weight}
-                          data-field="weight-range"
-                        />
-                      </label>
+                      </div>
                     </div>
                   ))}
                 </div>
                 <button id="refresh-machine-score" className="ghost" type="button">
-                  Refresh machine trust score
+                  Add trust events
                 </button>
               </>
             ) : (
-              <p className="muted">No trust factor weights configured for this scenario.</p>
+              <p className="muted">No trust factors configured for this scenario.</p>
             )}
           </div>
           <div className="evidence-panel">

@@ -733,6 +733,36 @@ body {
   align-items: end;
 }
 
+.trust-event-row {
+  grid-template-columns: minmax(70px, 0.8fr) 90px minmax(180px, 1fr) minmax(140px, 1fr);
+  column-gap: 12px;
+}
+
+.trust-event-header {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  align-items: center;
+}
+
+.trust-event-header .evidence-label {
+  font-weight: 600;
+}
+
+.human-input-header {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  align-items: center;
+}
+
+.human-input-header .evidence-label {
+  font-weight: 600;
+}
+
+
 .evidence-label {
   font-weight: 600;
   font-size: 0.9rem;
@@ -745,6 +775,14 @@ body {
   border: 1px solid rgba(0, 0, 0, 0.12);
   background: var(--white);
   font-size: 0.85rem;
+}
+
+.evidence-row input[type="checkbox"],
+.evidence-row input[data-field="event-active"] {
+  width: auto;
+  padding: 0;
+  border-radius: 4px;
+  aspect-ratio: 1;
 }
 
 @media (max-width: 1100px) {

@@ -8,6 +8,8 @@ import cridit.api.dto.request.workflow.TrustCuesRequest;
 import cridit.api.dto.request.workflow.CalibrationRecordRequest;
 import cridit.api.dto.request.workflow.PostflightRequest;
 import cridit.api.dto.request.workflow.PostflightCalibrationRequest;
+import cridit.api.dto.request.machine.TrustEventRequest;
+import cridit.api.dto.response.machine.MachineTrustEventResponse;
 import cridit.api.dto.response.workflow.PostflightSummary;
 import cridit.calibration.Calibration;
 import cridit.calibration.TrustCues;
@@ -19,9 +21,12 @@ import cridit.humanSide.HumanSideTrustEvaluation;
 import cridit.machineSide.MachineSideTrustEvaluation;
 import cridit.humanSide.preflight.PreflightScore;
 import cridit.humanSide.PhysiologicalReport;
+import cridit.machineSide.events.MachineTrustEventService;
 import cridit.observability.CRiDiTObservability;
 import cridit.observability.CalibrationHistoryEntry;
 import cridit.observability.CalibrationHistoryStore;
+import cridit.observability.PostflightAnswerStore;
+import cridit.observability.PreflightAnswerStore;
 
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
@@ -50,21 +55,37 @@ public class CRiDiTController {
     @Inject
     PostflightService postflightService;
 
+    @Inject
+    PreflightAnswerStore preflightAnswerStore;
+
+    @Inject
+    PostflightAnswerStore postflightAnswerStore;
+
+    @Inject
+    MachineTrustEventService machineTrustEventService;
+
     public CRiDiTController(MachineSideTrustEvaluation machineSideTrustEvaluation,
                             HumanSideTrustEvaluation humanSideTrustEvaluation,
                             Calibration calibration,
                             CRiDiTObservability observability,
-                            PostflightService postflightService) {
+                            PostflightService postflightService,
+                            PreflightAnswerStore preflightAnswerStore,
+                            PostflightAnswerStore postflightAnswerStore,
+                            MachineTrustEventService machineTrustEventService) {
         this.machineSideTrustEvaluation = machineSideTrustEvaluation;
         this.humanSideTrustEvaluation = humanSideTrustEvaluation;
         this.calibration = calibration;
         this.observability = observability;
         this.postflightService = postflightService;
+        this.preflightAnswerStore = preflightAnswerStore;
+        this.postflightAnswerStore = postflightAnswerStore;
+        this.machineTrustEventService = machineTrustEventService;
     }
 
     @POST
     @Path("/preflight/params")
     public PreflightScore.ScoreResult getPreflightParams(PreflightRequest request) {
+        preflightAnswerStore.record(request);
         PreflightScore.Response preflightResponse = request.toResponse();
         return PreflightScore.computeScore(preflightResponse);
     }
@@ -73,8 +94,13 @@ public class CRiDiTController {
     @Path("/evaluation/score/machine")
     public double getMachineTrustScoreP(EvidenceRequest evidenceRecords) {
         List<Evidence> evidenceSet = evidenceRecords.evidenceSet();
-        List<Evidence.Weight> evidenceWeights = evidenceRecords.evidenceWeights();
-        return machineSideTrustEvaluation.getMachineTrustScore(evidenceSet, evidenceWeights);
+        return machineSideTrustEvaluation.getMachineTrustScore(evidenceSet);
+    }
+
+    @POST
+    @Path("/machine/events")
+    public MachineTrustEventResponse recordMachineEvent(TrustEventRequest request) {
+        return machineTrustEventService.recordEvent(request);
     }
 
     @POST
@@ -168,6 +194,7 @@ public class CRiDiTController {
     @POST
     @Path("/postflight")
     public PostflightSummary submitPostflight(PostflightRequest request) {
+        postflightAnswerStore.record(request);
         return postflightService.submit(request);
     }
 
@@ -206,10 +233,7 @@ public class CRiDiTController {
     private TrustCues buildTrustCues(TrustCuesRequest trustCuesRequest, String thresholdNature) {
         EvidenceRequest evidenceRequest = trustCuesRequest.evidenceRequest();
         List<Evidence> evidenceSet = evidenceRequest == null ? null : evidenceRequest.evidenceSet();
-        List<Evidence.Weight> evidenceWeights = evidenceRequest == null
-                ? null
-                : evidenceRequest.evidenceWeights();
-        double machineScore = machineSideTrustEvaluation.getMachineTrustScore(evidenceSet, evidenceWeights);
+        double machineScore = machineSideTrustEvaluation.getMachineTrustScore(evidenceSet);
         machineScore = machineSideTrustEvaluation.applyRiskAdjustment(machineScore, trustCuesRequest.risk());
 
         double humanScore = evaluateHumanTrustScore(trustCuesRequest.humanInputRequest());
