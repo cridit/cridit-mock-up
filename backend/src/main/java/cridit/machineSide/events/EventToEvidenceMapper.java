@@ -45,11 +45,11 @@ public class EventToEvidenceMapper {
             return;
         }
         if (masses[0] > masses[1]) {
-            masses[0] = masses[0] * (0.5 + 0.5 * factor);
-            masses[1] = masses[1] * (1.0 - 0.5 * factor);
+            masses[0] = masses[0] * (0.75 + 0.25 * factor);
+            masses[1] = masses[1] * (1.0 - 0.25 * factor);
         } else if (masses[1] > masses[0]) {
-            masses[1] = masses[1] * (0.5 + 0.5 * factor);
-            masses[0] = masses[0] * (1.0 - 0.5 * factor);
+            masses[1] = masses[1] * (0.75 + 0.25 * factor);
+            masses[0] = masses[0] * (1.0 - 0.25 * factor);
         }
         masses[2] = 1.0 - (masses[0] + masses[1]);
     }
@@ -59,8 +59,9 @@ public class EventToEvidenceMapper {
             return;
         }
         double multiplier = context.multiplier();
-        if (multiplier > 1.0) {
-            masses[1] *= multiplier;
+        double capped = Math.min(multiplier, 1.35);
+        if (capped > 1.0) {
+            masses[1] *= capped;
             double excess = masses[1] - 1.0;
             if (excess > 0.0) {
                 masses[1] = 1.0;
