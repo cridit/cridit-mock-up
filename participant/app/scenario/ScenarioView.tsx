@@ -78,7 +78,7 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
       root.classList.add("pre-interaction");
     }
 
-    const chatBaseUrl = backendUrl || "http://localhost:8001";
+    const chatBaseUrl = backendUrl || "http://cridit:8001";
     let chatPoll: number | null = null;
     let trustPoll: number | null = null;
     let lastChatId = 0;
@@ -602,7 +602,7 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
 
       try {
         const response = await fetch(
-          `${backendUrl || "http://localhost:8001"}/cridit/calibration/trustCues`,
+          `${backendUrl || "http://cridit:8001"}/cridit/calibration/trustCues`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },

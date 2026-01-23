@@ -10,7 +10,7 @@ type ParticipantScenarioClientProps = {
   scenarioKey: ScenarioKey;
 };
 
-const BACKEND_URL = "http://localhost:8001";
+const BACKEND_URL = "http://cridit:8001";
 
 export function ParticipantScenarioClient({ scenarioKey }: ParticipantScenarioClientProps) {
   const router = useRouter();
