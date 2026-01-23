@@ -12,7 +12,7 @@ import {
 import { mockPreflightParams } from "../../lib/mock";
 import { scenarioMap, scenarios, type ScenarioKey } from "../../scenario/data";
 
-const DEFAULT_BACKEND_URL = "http://localhost:8001";
+const DEFAULT_BACKEND_URL = "http://cridit:8001";
 
 const sendJSON = async (baseUrl: string, path: string, payload: unknown) => {
   const url = baseUrl ? `${baseUrl}${path}` : path;

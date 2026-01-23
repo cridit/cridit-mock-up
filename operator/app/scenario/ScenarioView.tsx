@@ -282,7 +282,7 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
       operatorPrompt: prompt || null,
       model: "gpt-4o-mini",
     };
-    const baseUrl = backendUrl || "http://localhost:8001";
+    const baseUrl = backendUrl || "http://cridit:8001";
     try {
       setScriptedStatus("Sending to OpenAI...");
       const response = await fetch(`${baseUrl}/openai/respond`, {
@@ -336,7 +336,7 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
     }
 
     const scenarioKey = scenarioRef.current.key;
-    const chatBaseUrl = backendUrl || "http://localhost:8001";
+    const chatBaseUrl = backendUrl || "http://cridit:8001";
     let chatPoll: number | null = null;
     let trustPoll: number | null = null;
     let inputPoll: number | null = null;
@@ -772,7 +772,7 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
 
       try {
         const response = await fetch(
-          `${backendUrl || "http://localhost:8001"}/cridit/calibration/trustCues`,
+          `${backendUrl || "http://cridit:8001"}/cridit/calibration/trustCues`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
