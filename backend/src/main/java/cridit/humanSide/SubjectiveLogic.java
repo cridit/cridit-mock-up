@@ -109,6 +109,11 @@ public class SubjectiveLogic {
         double d = (left.getDisbelief() * u2 + right.getDisbelief() * u1) / k;
         double u = (u1 * u2) / k;
         double a = (left.getBaseRate() * u2 + right.getBaseRate() * u1) / k;
+        if (a < 0.0) {
+            a = 0.0;
+        } else if (a > 1.0) {
+            a = 1.0;
+        }
         return new Opinion(b, d, u, a);
     }
 
@@ -127,6 +132,13 @@ public class SubjectiveLogic {
         double b = opinion.getBelief();
         double a = opinion.getBaseRate();
         double u = opinion.getUncertainty();
-        return b + a*u;
+        double score = b + a * u;
+        if (score < 0.0) {
+            return 0.0;
+        }
+        if (score > 1.0) {
+            return 1.0;
+        }
+        return score;
     }
 }

@@ -55,7 +55,7 @@ public class HumanSideTrustEvaluationTest {
         PhysiologicalReport physioReport = new PhysiologicalReport(physioLikelihood, physioConfidence, physioBaseRate);
         double score = humanSideTrustEvaluation.getHumanTrustScore(
                 behaviorInputWeight, adoption, feedbackInputWeight, feedbackReport, physioInputWeight, physioReport);
-        Assertions.assertEquals(0.881, (double) Math.round(score * 1000) / 1000.0);
+        Assertions.assertEquals(0.867, (double) Math.round(score * 1000) / 1000.0);
     }
 
     @Test
@@ -123,7 +123,7 @@ public class HumanSideTrustEvaluationTest {
         PhysiologicalReport physioReport = new PhysiologicalReport(physioLikelihood, physioConfidence, physioBaseRate);
         double score = humanSideTrustEvaluation.getHumanTrustScore(
                 behaviorInputWeight, adoption, feedbackInputWeight, feedbackReport, physioInputWeight, physioReport);
-        assertEquals(1.011, (double) Math.round(score * 1000) / 1000.0);
+        assertEquals(0.877, (double) Math.round(score * 1000) / 1000.0);
     }
 
     @Test
@@ -204,7 +204,7 @@ public class HumanSideTrustEvaluationTest {
 
         double score = humanSideTrustEvaluation.getHumanTrustScoreWithPreflight(
                 0.0, 0, 0, preflightResponse, 0.7, feedbackReport, 0.3, physioReport);
-        assertEquals(0.881, (double) Math.round(score * 1000) / 1000.0);
+        assertEquals(0.856, (double) Math.round(score * 1000) / 1000.0);
     }
 
     @Test

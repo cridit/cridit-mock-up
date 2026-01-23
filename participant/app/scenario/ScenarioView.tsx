@@ -712,12 +712,58 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
       });
     };
 
+    const escapeHtml = (value: string) =>
+      value
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+
+    const formatChatText = (value: string) => {
+      const normalized = value.replace(/\r\n/g, "\n");
+      const trimmed = normalized.trim();
+      if (!trimmed) return "";
+      if (!trimmed.includes("```") && (trimmed.startsWith("{") || trimmed.startsWith("["))) {
+        try {
+          const pretty = JSON.stringify(JSON.parse(trimmed), null, 2);
+          return `<pre><code>${escapeHtml(pretty)}</code></pre>`;
+        } catch {
+          // fall through to plain rendering
+        }
+      }
+      const parts: string[] = [];
+      const fenceRegex = /```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g;
+      let lastIndex = 0;
+      let match: RegExpExecArray | null;
+      while ((match = fenceRegex.exec(normalized)) !== null) {
+        const [fullMatch, _lang, code] = match;
+        const start = match.index;
+        if (start > lastIndex) {
+          const segment = normalized.slice(lastIndex, start);
+          parts.push(escapeHtml(segment).replace(/\n/g, "<br>"));
+        }
+        parts.push(`<pre><code>${escapeHtml(code)}</code></pre>`);
+        lastIndex = start + fullMatch.length;
+      }
+      if (lastIndex < normalized.length) {
+        const tail = normalized.slice(lastIndex);
+        parts.push(escapeHtml(tail).replace(/\n/g, "<br>"));
+      }
+      return parts.join("");
+    };
+
     const appendChatBubble = (container: Element, role: string, text: string) => {
       const bubble = document.createElement("div");
       bubble.className = `bubble ${role}`;
-      const paragraph = document.createElement("p");
-      paragraph.innerHTML = `<strong>${role === "user" ? "Participant" : "System"}</strong> · ${text}`;
-      bubble.appendChild(paragraph);
+      const header = document.createElement("div");
+      header.className = "bubble-header";
+      header.innerHTML = `<strong>${role === "user" ? "Participant" : "System"}</strong>`;
+      const body = document.createElement("div");
+      body.className = "bubble-body";
+      body.innerHTML = formatChatText(text);
+      bubble.appendChild(header);
+      bubble.appendChild(body);
       container.appendChild(bubble);
       (container as HTMLElement).scrollTop = (container as HTMLElement).scrollHeight;
     };
@@ -733,9 +779,14 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
     const appendThinkingBubble = (container: Element) => {
       const bubble = document.createElement("div");
       bubble.className = "bubble system thinking";
-      const paragraph = document.createElement("p");
-      paragraph.innerHTML = "<strong>System</strong> · Thinking…";
-      bubble.appendChild(paragraph);
+      const header = document.createElement("div");
+      header.className = "bubble-header";
+      header.innerHTML = "<strong>System</strong>";
+      const body = document.createElement("div");
+      body.className = "bubble-body";
+      body.textContent = "Thinking...";
+      bubble.appendChild(header);
+      bubble.appendChild(body);
       container.appendChild(bubble);
       (container as HTMLElement).scrollTop = (container as HTMLElement).scrollHeight;
     };
@@ -746,9 +797,9 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
         appendChatBubble(container, "system", text);
         return;
       }
-      const paragraph = thinking.querySelector("p");
-      if (paragraph) {
-        paragraph.innerHTML = `<strong>System</strong> · ${text}`;
+      const body = thinking.querySelector(".bubble-body");
+      if (body) {
+        body.innerHTML = formatChatText(text);
       }
       thinking.classList.remove("thinking");
     };
