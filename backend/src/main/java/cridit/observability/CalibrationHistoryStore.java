@@ -45,13 +45,14 @@ public class CalibrationHistoryStore {
                 scenarioKey,
                 taskId,
                 resolvedTimestamp,
-                trustCues.humanTrustScore(),
-                trustCues.machineTrustScore(),
+                round3(trustCues.humanTrustScore()),
+                round3(trustCues.machineTrustScore()),
                 trustCues.humanMachineTrustGap(),
                 trustCues.threshold(),
                 trustCues.decision(),
-                conflictRedistribution,
-                thresholdNature
+                "pcr5",
+                "dynamic",
+                null
         );
         latestByScenario.put(scenarioKey, entry);
         append(entry);
@@ -66,6 +67,7 @@ public class CalibrationHistoryStore {
                              String decision,
                              String conflictRedistribution,
                              String thresholdNature,
+                             String prompt,
                              String timestamp) {
         String resolvedTimestamp = timestamp == null || timestamp.isBlank()
                 ? Instant.now().toString()
@@ -74,13 +76,14 @@ public class CalibrationHistoryStore {
                 scenarioKey,
                 taskId,
                 resolvedTimestamp,
-                humanTrustScore == null ? 0.0 : humanTrustScore,
-                machineTrustScore == null ? 0.0 : machineTrustScore,
+                round3(humanTrustScore == null ? 0.0 : humanTrustScore),
+                round3(machineTrustScore == null ? 0.0 : machineTrustScore),
                 humanMachineTrustGap == null ? 0.0 : humanMachineTrustGap,
                 threshold == null ? 0.0 : threshold,
                 decision == null ? "NO ACTION" : decision,
-                conflictRedistribution == null ? "manual" : conflictRedistribution,
-                thresholdNature == null ? "manual" : thresholdNature
+                "pcr5",
+                "dynamic",
+                prompt == null || prompt.isBlank() ? null : prompt
         );
         latestByScenario.put(scenarioKey, entry);
         append(entry);
@@ -156,5 +159,12 @@ public class CalibrationHistoryStore {
             return null;
         }
         return latest;
+    }
+
+    private double round3(double value) {
+        if (!Double.isFinite(value)) {
+            return value;
+        }
+        return Math.round(value * 1000.0) / 1000.0;
     }
 }

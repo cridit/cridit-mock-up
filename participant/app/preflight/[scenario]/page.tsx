@@ -51,17 +51,17 @@ export default function PreflightScenarioPage() {
   const [backendBaseUrl] = useState(DEFAULT_BACKEND_URL);
   const [preflight, setPreflight] = useState<PreflightAnswers>({
     scenarioKey: scenarioKey ?? undefined,
-    intentionToTrust1: 4,
-    intentionToTrust2: 4,
-    intentionToTrust3: 4,
-    privacyConcern1: 4,
-    privacyConcern2: 4,
-    privacyConcern3: 4,
-    privacyConcern4: 4,
-    privacyConcern5: 4,
-    riskAversion1: 4,
-    riskAversion2: 4,
-    riskAversion3: 4,
+    intentionToTrustPerformance: 4,
+    intentionToTrustIntention: 4,
+    intentionToTrustBenefits: 4,
+    privacyConcernAmount: 4,
+    privacyConcernSecurity: 4,
+    privacyConcernUse: 4,
+    privacyConcernThirdParty: 4,
+    privacyConcernMainRisk: 4,
+    riskAversionRecommendation: 4,
+    riskAversionLoss: 4,
+    riskAversionCompleteness: 4,
     hrFamiliarity: 4,
     hrRecruitmentFrequency: 4,
     hrCriteriaTransparencyImportance: 4,
@@ -69,6 +69,7 @@ export default function PreflightScenarioPage() {
     hrFairnessImportance: 4,
     hrClassificationAccuracyImportance: 4,
     hrConsistencyImportance: 4,
+    hrPredictabilityImportance: 4,
     hrFeedbackQualityImportance: 4,
     hrToneProfessionalismImportance: 4,
     hrHumanOversightImportance: 4,
@@ -80,6 +81,7 @@ export default function PreflightScenarioPage() {
     financeUsageFrequency: 4,
     calculationAccuracyImportance: 4,
     consistencyImportance: 4,
+    predictabilityImportance: 4,
     assumptionTransparencyImportance: 4,
     traceabilityImportance: 4,
     auditabilityImportance: 4,
@@ -87,6 +89,8 @@ export default function PreflightScenarioPage() {
     uncertaintyCalibrationImportance: 4,
     riskCompletenessImportance: 4,
     professionalBoundariesImportance: 4,
+    financeDistrustTriggers: "",
+    financeTrustAccelerators: "",
     legalReliabilityImportance: 4,
     legalCitationAccuracyImportance: 4,
     legalTransparencyImportance: 4,
@@ -95,8 +99,10 @@ export default function PreflightScenarioPage() {
     legalHumanOversightImportance: 4,
     legalAccountabilityImportance: 4,
     legalUncertaintyCommunicationImportance: 4,
-    distrustTriggers: "",
-    trustAccelerators: "",
+    legalConsistencyImportance: 4,
+    legalPredictabilityImportance: 4,
+    legalDistrustTriggers: "",
+    legalTrustAccelerators: "",
   });
   const [preflightStatus, setPreflightStatus] = useState("Not run.");
   const [syncStatus, setSyncStatus] = useState("");
@@ -126,72 +132,72 @@ export default function PreflightScenarioPage() {
 
   const dispositionalQuestions: LikertQuestion[] = [
     {
-      key: "intentionToTrust1",
+      key: "intentionToTrustPerformance",
       label:
         "In general, you tend to trust technical infrastructures embedded with AI (AI-infused systems).",
       min: 1,
       max: 7,
     },
     {
-      key: "intentionToTrust2",
+      key: "intentionToTrustIntention",
       label: "You usually believe that AI-infused systems are designed to improve performance.",
       min: 1,
       max: 7,
     },
     {
-      key: "intentionToTrust3",
+      key: "intentionToTrustBenefits",
       label: "You are generally optimistic about the benefits that AI-infused systems can provide.",
       min: 1,
       max: 7,
     },
     {
-      key: "privacyConcern1",
+      key: "privacyConcernAmount",
       label:
         "You are generally concerned about how much personal information AI-infused systems collect about you.",
       min: 1,
       max: 7,
     },
     {
-      key: "privacyConcern2",
+      key: "privacyConcernSecurity",
       label: "You often worry that your data is not secure when you use AI-infused systems.",
       min: 1,
       max: 7,
     },
     {
-      key: "privacyConcern3",
+      key: "privacyConcernUse",
       label: "You are sensitive about how your information is used by AI-infused systems.",
       min: 1,
       max: 7,
     },
     {
-      key: "privacyConcern4",
+      key: "privacyConcernThirdParty",
       label:
         "The idea of an AI technology provider sharing your personal data with third parties makes you uncomfortable.",
       min: 1,
       max: 7,
     },
     {
-      key: "privacyConcern5",
+      key: "privacyConcernMainRisk",
       label: "You believe privacy risks are among the most serious problems in today's digital world.",
       min: 1,
       max: 7,
     },
     {
-      key: "riskAversion1",
+      key: "riskAversionRecommendation",
       label:
         "You prefer to wait until a new AI-infused system has been proven by others before you try it.",
       min: 1,
       max: 7,
     },
     {
-      key: "riskAversion2",
+      key: "riskAversionLoss",
       label:
         "When using AI-infused systems, avoiding potential losses (like information leakage) matters more to you than gaining potential benefits.",
       min: 1,
       max: 7,
     },
     {
-      key: "riskAversion3",
+      key: "riskAversionCompleteness",
       label: "You like to fully understand all the risks before you use a new AI-infused system.",
       min: 1,
       max: 7,
@@ -224,6 +230,12 @@ export default function PreflightScenarioPage() {
     {
       key: "consistencyImportance",
       label: "Consistency across answers",
+      min: 1,
+      max: 7,
+    },
+    {
+      key: "predictabilityImportance",
+      label: "Predictability of the system behavior",
       min: 1,
       max: 7,
     },
@@ -267,11 +279,11 @@ export default function PreflightScenarioPage() {
 
   const financialOpenQuestions = [
     {
-      key: "distrustTriggers",
+      key: "financeDistrustTriggers",
       label: "In corporate finance, what would make you immediately distrust such a chatbot?",
     },
     {
-      key: "trustAccelerators",
+      key: "financeTrustAccelerators",
       label: "What would make you trust it faster?",
     },
   ] as const;
@@ -325,15 +337,27 @@ export default function PreflightScenarioPage() {
       min: 1,
       max: 7,
     },
+    {
+      key: "legalConsistencyImportance",
+      label: "Consistency across answers",
+      min: 1,
+      max: 7,
+    },
+    {
+      key: "legalPredictabilityImportance",
+      label: "Predictability of the system behavior",
+      min: 1,
+      max: 7,
+    },
   ];
 
   const legalOpenQuestions = [
     {
-      key: "distrustTriggers",
+      key: "legalDistrustTriggers",
       label: "In legal work, what would make you immediately distrust such a chatbot?",
     },
     {
-      key: "trustAccelerators",
+      key: "legalTrustAccelerators",
       label: "What would make you trust it faster in legal tasks?",
     },
   ] as const;
@@ -381,6 +405,12 @@ export default function PreflightScenarioPage() {
     {
       key: "hrConsistencyImportance",
       label: "Consistency across candidates",
+      min: 1,
+      max: 7,
+    },
+    {
+      key: "hrPredictabilityImportance",
+      label: "Predictability of the system behavior",
       min: 1,
       max: 7,
     },
@@ -443,6 +473,13 @@ export default function PreflightScenarioPage() {
           untrustworthyMass: 0.2,
           uncertaintyMass: 0.2,
           weight: toWeight(preflight.consistencyImportance),
+        },
+        {
+          evidenceKey: "predictability",
+          trustworthyMass: 0.6,
+          untrustworthyMass: 0.2,
+          uncertaintyMass: 0.2,
+          weight: toWeight(preflight.predictabilityImportance),
         },
         {
           evidenceKey: "assumption_transparency",
@@ -524,6 +561,13 @@ export default function PreflightScenarioPage() {
           untrustworthyMass: 0.2,
           uncertaintyMass: 0.2,
           weight: toWeight(preflight.hrConsistencyImportance),
+        },
+        {
+          evidenceKey: "predictability",
+          trustworthyMass: 0.6,
+          untrustworthyMass: 0.2,
+          uncertaintyMass: 0.2,
+          weight: toWeight(preflight.hrPredictabilityImportance),
         },
         {
           evidenceKey: "feedback_quality",
@@ -620,6 +664,20 @@ export default function PreflightScenarioPage() {
           uncertaintyMass: 0.2,
           weight: toWeight(preflight.legalUncertaintyCommunicationImportance),
         },
+        {
+          evidenceKey: "consistency",
+          trustworthyMass: 0.6,
+          untrustworthyMass: 0.2,
+          uncertaintyMass: 0.2,
+          weight: toWeight(preflight.legalConsistencyImportance),
+        },
+        {
+          evidenceKey: "predictability",
+          trustworthyMass: 0.6,
+          untrustworthyMass: 0.2,
+          uncertaintyMass: 0.2,
+          weight: toWeight(preflight.legalPredictabilityImportance),
+        },
       ];
     }
     return [];
@@ -672,6 +730,15 @@ export default function PreflightScenarioPage() {
       "Critical",
     ],
     consistencyImportance: [
+      "Not important",
+      "Slightly important",
+      "Somewhat important",
+      "Moderately important",
+      "Very important",
+      "Extremely important",
+      "Critical",
+    ],
+    predictabilityImportance: [
       "Not important",
       "Slightly important",
       "Somewhat important",
@@ -815,6 +882,24 @@ export default function PreflightScenarioPage() {
       "Extremely important",
       "Critical",
     ],
+    legalConsistencyImportance: [
+      "Not important",
+      "Slightly important",
+      "Somewhat important",
+      "Moderately important",
+      "Very important",
+      "Extremely important",
+      "Critical",
+    ],
+    legalPredictabilityImportance: [
+      "Not important",
+      "Slightly important",
+      "Somewhat important",
+      "Moderately important",
+      "Very important",
+      "Extremely important",
+      "Critical",
+    ],
     hrCriteriaTransparencyImportance: [
       "Not important",
       "Slightly important",
@@ -852,6 +937,15 @@ export default function PreflightScenarioPage() {
       "Critical",
     ],
     hrConsistencyImportance: [
+      "Not important",
+      "Slightly important",
+      "Somewhat important",
+      "Moderately important",
+      "Very important",
+      "Extremely important",
+      "Critical",
+    ],
+    hrPredictabilityImportance: [
       "Not important",
       "Slightly important",
       "Somewhat important",
@@ -905,7 +999,7 @@ export default function PreflightScenarioPage() {
       "Extremely important",
       "Critical",
     ],
-    intentionToTrust1: [
+    intentionToTrustPerformance: [
       "Strongly disagree",
       "Disagree",
       "Somewhat disagree",
@@ -914,7 +1008,7 @@ export default function PreflightScenarioPage() {
       "Agree",
       "Strongly agree",
     ],
-    intentionToTrust2: [
+    intentionToTrustIntention: [
       "Strongly disagree",
       "Disagree",
       "Somewhat disagree",
@@ -923,7 +1017,7 @@ export default function PreflightScenarioPage() {
       "Agree",
       "Strongly agree",
     ],
-    intentionToTrust3: [
+    intentionToTrustBenefits: [
       "Strongly disagree",
       "Disagree",
       "Somewhat disagree",
@@ -932,7 +1026,7 @@ export default function PreflightScenarioPage() {
       "Agree",
       "Strongly agree",
     ],
-    privacyConcern1: [
+    privacyConcernAmount: [
       "Strongly disagree",
       "Disagree",
       "Somewhat disagree",
@@ -941,7 +1035,7 @@ export default function PreflightScenarioPage() {
       "Agree",
       "Strongly agree",
     ],
-    privacyConcern2: [
+    privacyConcernSecurity: [
       "Strongly disagree",
       "Disagree",
       "Somewhat disagree",
@@ -950,7 +1044,7 @@ export default function PreflightScenarioPage() {
       "Agree",
       "Strongly agree",
     ],
-    privacyConcern3: [
+    privacyConcernUse: [
       "Strongly disagree",
       "Disagree",
       "Somewhat disagree",
@@ -959,7 +1053,7 @@ export default function PreflightScenarioPage() {
       "Agree",
       "Strongly agree",
     ],
-    privacyConcern4: [
+    privacyConcernThirdParty: [
       "Strongly disagree",
       "Disagree",
       "Somewhat disagree",
@@ -968,7 +1062,7 @@ export default function PreflightScenarioPage() {
       "Agree",
       "Strongly agree",
     ],
-    privacyConcern5: [
+    privacyConcernMainRisk: [
       "Strongly disagree",
       "Disagree",
       "Somewhat disagree",
@@ -977,7 +1071,7 @@ export default function PreflightScenarioPage() {
       "Agree",
       "Strongly agree",
     ],
-    riskAversion1: [
+    riskAversionRecommendation: [
       "Strongly disagree",
       "Disagree",
       "Somewhat disagree",
@@ -986,7 +1080,7 @@ export default function PreflightScenarioPage() {
       "Agree",
       "Strongly agree",
     ],
-    riskAversion2: [
+    riskAversionLoss: [
       "Strongly disagree",
       "Disagree",
       "Somewhat disagree",
@@ -995,7 +1089,7 @@ export default function PreflightScenarioPage() {
       "Agree",
       "Strongly agree",
     ],
-    riskAversion3: [
+    riskAversionCompleteness: [
       "Strongly disagree",
       "Disagree",
       "Somewhat disagree",
@@ -1052,21 +1146,22 @@ export default function PreflightScenarioPage() {
     if (scenarioKey === "financial") {
       return {
         scenarioKey: scenarioKey ?? undefined,
-        intentionToTrust1: preflight.intentionToTrust1 ?? 4,
-        intentionToTrust2: preflight.intentionToTrust2 ?? 4,
-        intentionToTrust3: preflight.intentionToTrust3 ?? 4,
-        privacyConcern1: preflight.privacyConcern1 ?? 4,
-        privacyConcern2: preflight.privacyConcern2 ?? 4,
-        privacyConcern3: preflight.privacyConcern3 ?? 4,
-        privacyConcern4: preflight.privacyConcern4 ?? 4,
-        privacyConcern5: preflight.privacyConcern5 ?? 4,
-        riskAversion1: preflight.riskAversion1 ?? 4,
-        riskAversion2: preflight.riskAversion2 ?? 4,
-        riskAversion3: preflight.riskAversion3 ?? 4,
+        intentionToTrustPerformance: preflight.intentionToTrustPerformance ?? 4,
+        intentionToTrustIntention: preflight.intentionToTrustIntention ?? 4,
+        intentionToTrustBenefits: preflight.intentionToTrustBenefits ?? 4,
+        privacyConcernAmount: preflight.privacyConcernAmount ?? 4,
+        privacyConcernSecurity: preflight.privacyConcernSecurity ?? 4,
+        privacyConcernUse: preflight.privacyConcernUse ?? 4,
+        privacyConcernThirdParty: preflight.privacyConcernThirdParty ?? 4,
+        privacyConcernMainRisk: preflight.privacyConcernMainRisk ?? 4,
+        riskAversionRecommendation: preflight.riskAversionRecommendation ?? 4,
+        riskAversionLoss: preflight.riskAversionLoss ?? 4,
+        riskAversionCompleteness: preflight.riskAversionCompleteness ?? 4,
         financeFamiliarity: preflight.financeFamiliarity ?? 4,
         financeUsageFrequency: preflight.financeUsageFrequency ?? 4,
         calculationAccuracyImportance: preflight.calculationAccuracyImportance ?? 4,
         consistencyImportance: preflight.consistencyImportance ?? 4,
+        predictabilityImportance: preflight.predictabilityImportance ?? 4,
         assumptionTransparencyImportance: preflight.assumptionTransparencyImportance ?? 4,
         traceabilityImportance: preflight.traceabilityImportance ?? 4,
         auditabilityImportance: preflight.auditabilityImportance ?? 4,
@@ -1074,24 +1169,24 @@ export default function PreflightScenarioPage() {
         uncertaintyCalibrationImportance: preflight.uncertaintyCalibrationImportance ?? 4,
         riskCompletenessImportance: preflight.riskCompletenessImportance ?? 4,
         professionalBoundariesImportance: preflight.professionalBoundariesImportance ?? 4,
-        distrustTriggers: preflight.distrustTriggers ?? "",
-        trustAccelerators: preflight.trustAccelerators ?? "",
+        financeDistrustTriggers: preflight.financeDistrustTriggers ?? "",
+        financeTrustAccelerators: preflight.financeTrustAccelerators ?? "",
       };
     }
     if (scenarioKey === "hiring") {
       return {
         scenarioKey: scenarioKey ?? undefined,
-        intentionToTrust1: preflight.intentionToTrust1 ?? 4,
-        intentionToTrust2: preflight.intentionToTrust2 ?? 4,
-        intentionToTrust3: preflight.intentionToTrust3 ?? 4,
-        privacyConcern1: preflight.privacyConcern1 ?? 4,
-        privacyConcern2: preflight.privacyConcern2 ?? 4,
-        privacyConcern3: preflight.privacyConcern3 ?? 4,
-        privacyConcern4: preflight.privacyConcern4 ?? 4,
-        privacyConcern5: preflight.privacyConcern5 ?? 4,
-        riskAversion1: preflight.riskAversion1 ?? 4,
-        riskAversion2: preflight.riskAversion2 ?? 4,
-        riskAversion3: preflight.riskAversion3 ?? 4,
+        intentionToTrustPerformance: preflight.intentionToTrustPerformance ?? 4,
+        intentionToTrustIntention: preflight.intentionToTrustIntention ?? 4,
+        intentionToTrustBenefits: preflight.intentionToTrustBenefits ?? 4,
+        privacyConcernAmount: preflight.privacyConcernAmount ?? 4,
+        privacyConcernSecurity: preflight.privacyConcernSecurity ?? 4,
+        privacyConcernUse: preflight.privacyConcernUse ?? 4,
+        privacyConcernThirdParty: preflight.privacyConcernThirdParty ?? 4,
+        privacyConcernMainRisk: preflight.privacyConcernMainRisk ?? 4,
+        riskAversionRecommendation: preflight.riskAversionRecommendation ?? 4,
+        riskAversionLoss: preflight.riskAversionLoss ?? 4,
+        riskAversionCompleteness: preflight.riskAversionCompleteness ?? 4,
         hrFamiliarity: preflight.hrFamiliarity ?? 4,
         hrRecruitmentFrequency: preflight.hrRecruitmentFrequency ?? 4,
         hrCriteriaTransparencyImportance: preflight.hrCriteriaTransparencyImportance ?? 4,
@@ -1099,6 +1194,7 @@ export default function PreflightScenarioPage() {
         hrFairnessImportance: preflight.hrFairnessImportance ?? 4,
         hrClassificationAccuracyImportance: preflight.hrClassificationAccuracyImportance ?? 4,
         hrConsistencyImportance: preflight.hrConsistencyImportance ?? 4,
+        hrPredictabilityImportance: preflight.hrPredictabilityImportance ?? 4,
         hrFeedbackQualityImportance: preflight.hrFeedbackQualityImportance ?? 4,
         hrToneProfessionalismImportance: preflight.hrToneProfessionalismImportance ?? 4,
         hrHumanOversightImportance: preflight.hrHumanOversightImportance ?? 4,
@@ -1111,17 +1207,17 @@ export default function PreflightScenarioPage() {
     if (scenarioKey === "legal") {
       return {
         scenarioKey: scenarioKey ?? undefined,
-        intentionToTrust1: preflight.intentionToTrust1 ?? 4,
-        intentionToTrust2: preflight.intentionToTrust2 ?? 4,
-        intentionToTrust3: preflight.intentionToTrust3 ?? 4,
-        privacyConcern1: preflight.privacyConcern1 ?? 4,
-        privacyConcern2: preflight.privacyConcern2 ?? 4,
-        privacyConcern3: preflight.privacyConcern3 ?? 4,
-        privacyConcern4: preflight.privacyConcern4 ?? 4,
-        privacyConcern5: preflight.privacyConcern5 ?? 4,
-        riskAversion1: preflight.riskAversion1 ?? 4,
-        riskAversion2: preflight.riskAversion2 ?? 4,
-        riskAversion3: preflight.riskAversion3 ?? 4,
+        intentionToTrustPerformance: preflight.intentionToTrustPerformance ?? 4,
+        intentionToTrustIntention: preflight.intentionToTrustIntention ?? 4,
+        intentionToTrustBenefits: preflight.intentionToTrustBenefits ?? 4,
+        privacyConcernAmount: preflight.privacyConcernAmount ?? 4,
+        privacyConcernSecurity: preflight.privacyConcernSecurity ?? 4,
+        privacyConcernUse: preflight.privacyConcernUse ?? 4,
+        privacyConcernThirdParty: preflight.privacyConcernThirdParty ?? 4,
+        privacyConcernMainRisk: preflight.privacyConcernMainRisk ?? 4,
+        riskAversionRecommendation: preflight.riskAversionRecommendation ?? 4,
+        riskAversionLoss: preflight.riskAversionLoss ?? 4,
+        riskAversionCompleteness: preflight.riskAversionCompleteness ?? 4,
         legalReliabilityImportance: preflight.legalReliabilityImportance ?? 4,
         legalCitationAccuracyImportance: preflight.legalCitationAccuracyImportance ?? 4,
         legalTransparencyImportance: preflight.legalTransparencyImportance ?? 4,
@@ -1131,23 +1227,25 @@ export default function PreflightScenarioPage() {
         legalAccountabilityImportance: preflight.legalAccountabilityImportance ?? 4,
         legalUncertaintyCommunicationImportance:
           preflight.legalUncertaintyCommunicationImportance ?? 4,
-        distrustTriggers: preflight.distrustTriggers ?? "",
-        trustAccelerators: preflight.trustAccelerators ?? "",
+        legalConsistencyImportance: preflight.legalConsistencyImportance ?? 4,
+        legalPredictabilityImportance: preflight.legalPredictabilityImportance ?? 4,
+        legalDistrustTriggers: preflight.legalDistrustTriggers ?? "",
+        legalTrustAccelerators: preflight.legalTrustAccelerators ?? "",
       };
     }
     return {
       scenarioKey: scenarioKey ?? undefined,
-      intentionToTrust1: preflight.intentionToTrust1 ?? 4,
-      intentionToTrust2: preflight.intentionToTrust2 ?? 4,
-      intentionToTrust3: preflight.intentionToTrust3 ?? 4,
-      privacyConcern1: preflight.privacyConcern1 ?? 4,
-      privacyConcern2: preflight.privacyConcern2 ?? 4,
-      privacyConcern3: preflight.privacyConcern3 ?? 4,
-      privacyConcern4: preflight.privacyConcern4 ?? 4,
-      privacyConcern5: preflight.privacyConcern5 ?? 4,
-      riskAversion1: preflight.riskAversion1 ?? 4,
-      riskAversion2: preflight.riskAversion2 ?? 4,
-      riskAversion3: preflight.riskAversion3 ?? 4,
+      intentionToTrustPerformance: preflight.intentionToTrustPerformance ?? 4,
+      intentionToTrustIntention: preflight.intentionToTrustIntention ?? 4,
+      intentionToTrustBenefits: preflight.intentionToTrustBenefits ?? 4,
+      privacyConcernAmount: preflight.privacyConcernAmount ?? 4,
+      privacyConcernSecurity: preflight.privacyConcernSecurity ?? 4,
+      privacyConcernUse: preflight.privacyConcernUse ?? 4,
+      privacyConcernThirdParty: preflight.privacyConcernThirdParty ?? 4,
+      privacyConcernMainRisk: preflight.privacyConcernMainRisk ?? 4,
+      riskAversionRecommendation: preflight.riskAversionRecommendation ?? 4,
+      riskAversionLoss: preflight.riskAversionLoss ?? 4,
+      riskAversionCompleteness: preflight.riskAversionCompleteness ?? 4,
     };
   };
 
@@ -1228,7 +1326,6 @@ export default function PreflightScenarioPage() {
       preflightScore: number;
       behaviorBaseRate: number;
       feedbackBaseRate: number;
-      physioBaseRate: number;
       initialUncertainty: number;
       initialThreshold: number;
     };
@@ -1249,7 +1346,6 @@ export default function PreflightScenarioPage() {
     const params: SessionParams = {
       behaviorBaseRate: Number(response.behaviorBaseRate ?? 0),
       feedbackBaseRate: Number(response.feedbackBaseRate ?? 0),
-      physioBaseRate: Number(response.physioBaseRate ?? 0),
       initialUncertainty: Number(response.initialUncertainty ?? 0),
       initialThreshold: Number(response.initialThreshold ?? scenario.threshold),
     };

@@ -188,7 +188,7 @@ export default function Home() {
               </label>
             </div>
             <div className="button-row">
-              <a className="primary" href={`/scenario/${scenario.key}/operator`}>
+              <a className="primary" href={`/scenario/${scenario.key}`}>
                 Open operator view
               </a>
             </div>

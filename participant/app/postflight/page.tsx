@@ -34,6 +34,13 @@ const TRUST_OUTCOME_QUESTIONS_HR = [
   { id: "relianceWithoutVerification", label: "I would rely on this system without human review" },
 ] as const;
 
+const TRUST_OUTCOME_QUESTIONS_LEGAL = [
+  { id: "overallTrust", label: "Overall trust in the chatbot for legal analysis" },
+  { id: "willingnessReuse", label: "Willingness to reuse for similar legal tasks" },
+  { id: "relianceWithVerification", label: "Willingness to rely on outputs with verification" },
+  { id: "relianceWithoutVerification", label: "Willingness to rely on outputs without verification" },
+] as const;
+
 const TRUST_QUALITY_QUESTIONS_FINANCE = [
   { id: "calculationsAccurate", label: "The chatbot's calculations were accurate" },
   { id: "assumptionsExplicit", label: "It made assumptions explicit" },
@@ -55,6 +62,17 @@ const TRUST_QUALITY_QUESTIONS_HR = [
   { id: "controlOfDecision", label: "I felt in control of the final decision" },
 ] as const;
 
+const TRUST_QUALITY_QUESTIONS_LEGAL = [
+  { id: "calculationsAccurate", label: "The chatbot's legal analysis was accurate" },
+  { id: "assumptionsExplicit", label: "It made legal assumptions explicit" },
+  { id: "traceabilityShown", label: "It showed steps / traceability" },
+  { id: "consistencyMaintained", label: "It was consistent across answers" },
+  { id: "uncertaintyCommunicated", label: "It communicated uncertainty appropriately" },
+  { id: "riskComprehensive", label: "It helped identify legal risks comprehensively" },
+  { id: "professionalBoundaries", label: "It respected professional boundaries" },
+  { id: "taskUtility", label: "The system saved time" },
+] as const;
+
 const REMEDIATION_QUESTIONS_FINANCE = [
   { id: "remediationAcknowledgedError", label: "The chatbot acknowledged the error/limitation" },
   { id: "remediationFixedProblem", label: "The correction fixed the problem" },
@@ -71,6 +89,13 @@ const REMEDIATION_QUESTIONS_HR = [
   { id: "remediationTrustRestored", label: "My trust was restored after the remediation" },
 ] as const;
 
+const REMEDIATION_QUESTIONS_LEGAL = [
+  { id: "remediationAcknowledgedError", label: "The chatbot acknowledged the error/limitation" },
+  { id: "remediationFixedProblem", label: "The correction fixed the problem" },
+  { id: "remediationExplanationHelpful", label: "The explanation helped me understand why it happened" },
+  { id: "remediationMoreAuditable", label: "The revised answer was more auditable" },
+  { id: "remediationTrustRestored", label: "Trust was restored after remediation" },
+] as const;
 const readLikert = (id: string) => {
   const raw = (document.getElementById(id) as HTMLSelectElement | null)?.value;
   return raw ? Number(raw) : null;
@@ -159,19 +184,6 @@ export default function PostflightPage() {
       improvementSuggestion: readText("improvementSuggestion"),
     };
 
-    const overallTrust = surveyInput.overallTrust;
-    const feedbackInput = {
-      rating: overallTrust ? Math.max(1, Math.min(5, Math.round((overallTrust / 7) * 5))) : null,
-      feedbackText: surveyInput.trustChangeExplanation,
-      emotionalState: null,
-      satisfaction: null,
-      helpfulness: null,
-      trustCueUsefulness: null,
-      trustFactors: [],
-      timestamp: new Date().toISOString(),
-      interactionId: `postflight-${Date.now()}`,
-    };
-
     const payload = {
       sessionId: session.sessionId,
       participantId: session.participantId || null,
@@ -180,7 +192,6 @@ export default function PostflightPage() {
         evidenceSet: [],
         evidenceWeights: [],
       },
-      feedbackInput,
       surveyInput,
     };
 
@@ -238,18 +249,24 @@ export default function PostflightPage() {
     );
   }
 
-  const isHiring =
-    session.domain?.toLowerCase().includes("hiring") ||
-    session.taskId?.toLowerCase().includes("hiring");
+  const scenarioKey = `${session.domain ?? ""} ${session.taskId ?? ""}`.toLowerCase();
+  const isHiring = scenarioKey.includes("hiring");
+  const isLegal = scenarioKey.includes("legal");
   const trustOutcomeQuestions = isHiring
     ? TRUST_OUTCOME_QUESTIONS_HR
-    : TRUST_OUTCOME_QUESTIONS_FINANCE;
+    : isLegal
+      ? TRUST_OUTCOME_QUESTIONS_LEGAL
+      : TRUST_OUTCOME_QUESTIONS_FINANCE;
   const trustQualityQuestions = isHiring
     ? TRUST_QUALITY_QUESTIONS_HR
-    : TRUST_QUALITY_QUESTIONS_FINANCE;
+    : isLegal
+      ? TRUST_QUALITY_QUESTIONS_LEGAL
+      : TRUST_QUALITY_QUESTIONS_FINANCE;
   const remediationQuestions = isHiring
     ? REMEDIATION_QUESTIONS_HR
-    : REMEDIATION_QUESTIONS_FINANCE;
+    : isLegal
+      ? REMEDIATION_QUESTIONS_LEGAL
+      : REMEDIATION_QUESTIONS_FINANCE;
 
   return (
     <div className="page">
@@ -260,7 +277,9 @@ export default function PostflightPage() {
           <p className="subhead">
             {isHiring
               ? "HR trust evaluation after completing the scenario interaction (scale 1-7)."
-              : "Corporate finance trust evaluation after completing the scenario interaction (scale 1-7)."}
+              : isLegal
+                ? "Legal trust evaluation after completing the scenario interaction (scale 1-7)."
+                : "Corporate finance trust evaluation after completing the scenario interaction (scale 1-7)."}
           </p>
         </div>
       </header>
@@ -272,7 +291,13 @@ export default function PostflightPage() {
         </section>
 
         <section className="panel full-span">
-          <h2>{isHiring ? "HR Trust Qualities" : "Corporate-finance Trust Qualities"}</h2>
+          <h2>
+            {isHiring
+              ? "HR Trust Qualities"
+              : isLegal
+                ? "Legal Trust Qualities"
+                : "Corporate-finance Trust Qualities"}
+          </h2>
           <div>{trustQualityQuestions.map((question) => renderLikertQuestion(question.id, question.label))}</div>
         </section>
 
@@ -416,6 +441,21 @@ export default function PostflightPage() {
                 <div className="mb-3">
                   <label className="form-label">
                     What would make this system acceptable in a real HR process?
+                  </label>
+                  <textarea id="improvementSuggestion" className="form-control"></textarea>
+                </div>
+              </>
+            ) : isLegal ? (
+              <>
+                <div className="mb-3">
+                  <label className="form-label">
+                    What specifically increased or decreased your trust?
+                  </label>
+                  <textarea id="trustChangeExplanation" className="form-control"></textarea>
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">
+                    What would you change to make the system usable in legal contexts?
                   </label>
                   <textarea id="improvementSuggestion" className="form-control"></textarea>
                 </div>

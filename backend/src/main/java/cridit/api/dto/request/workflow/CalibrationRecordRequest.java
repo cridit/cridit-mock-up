@@ -10,6 +10,7 @@ public record CalibrationRecordRequest(
         String decision,
         String conflictRedistribution,
         String thresholdNature,
+        String prompt,
         String timestamp
 ) {
 }

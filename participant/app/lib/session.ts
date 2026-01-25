@@ -2,17 +2,17 @@
 
 export type PreflightAnswers = {
   scenarioKey?: string;
-  intentionToTrust1?: number;
-  intentionToTrust2?: number;
-  intentionToTrust3?: number;
-  privacyConcern1?: number;
-  privacyConcern2?: number;
-  privacyConcern3?: number;
-  privacyConcern4?: number;
-  privacyConcern5?: number;
-  riskAversion1?: number;
-  riskAversion2?: number;
-  riskAversion3?: number;
+  intentionToTrustPerformance?: number;
+  intentionToTrustIntention?: number;
+  intentionToTrustBenefits?: number;
+  privacyConcernAmount?: number;
+  privacyConcernSecurity?: number;
+  privacyConcernUse?: number;
+  privacyConcernThirdParty?: number;
+  privacyConcernMainRisk?: number;
+  riskAversionRecommendation?: number;
+  riskAversionLoss?: number;
+  riskAversionCompleteness?: number;
   hrFamiliarity?: number;
   hrRecruitmentFrequency?: number;
   hrCriteriaTransparencyImportance?: number;
@@ -20,6 +20,7 @@ export type PreflightAnswers = {
   hrFairnessImportance?: number;
   hrClassificationAccuracyImportance?: number;
   hrConsistencyImportance?: number;
+  hrPredictabilityImportance?: number;
   hrFeedbackQualityImportance?: number;
   hrToneProfessionalismImportance?: number;
   hrHumanOversightImportance?: number;
@@ -31,6 +32,7 @@ export type PreflightAnswers = {
   financeUsageFrequency?: number;
   calculationAccuracyImportance?: number;
   consistencyImportance?: number;
+  predictabilityImportance?: number;
   assumptionTransparencyImportance?: number;
   traceabilityImportance?: number;
   auditabilityImportance?: number;
@@ -38,6 +40,8 @@ export type PreflightAnswers = {
   uncertaintyCalibrationImportance?: number;
   riskCompletenessImportance?: number;
   professionalBoundariesImportance?: number;
+  financeDistrustTriggers?: string;
+  financeTrustAccelerators?: string;
   legalReliabilityImportance?: number;
   legalCitationAccuracyImportance?: number;
   legalTransparencyImportance?: number;
@@ -46,14 +50,15 @@ export type PreflightAnswers = {
   legalHumanOversightImportance?: number;
   legalAccountabilityImportance?: number;
   legalUncertaintyCommunicationImportance?: number;
-  distrustTriggers?: string;
-  trustAccelerators?: string;
+  legalConsistencyImportance?: number;
+  legalPredictabilityImportance?: number;
+  legalDistrustTriggers?: string;
+  legalTrustAccelerators?: string;
 };
 
 export type SessionParams = {
   behaviorBaseRate: number;
   feedbackBaseRate: number;
-  physioBaseRate: number;
   initialUncertainty: number;
   initialThreshold: number;
 };

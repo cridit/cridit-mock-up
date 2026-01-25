@@ -10,6 +10,7 @@ public record CalibrationHistoryEntry(
         double threshold,
         String decision,
         String conflictRedistribution,
-        String thresholdNature
+        String thresholdNature,
+        String prompt
 ) {
 }

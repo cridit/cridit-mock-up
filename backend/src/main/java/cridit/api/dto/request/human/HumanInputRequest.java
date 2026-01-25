@@ -46,25 +46,4 @@ public record HumanInputRequest(
         @DecimalMax(value = "1.0", inclusive = true)
         @JsonAlias({"feedbackBaseRate"})
         double feedbackBaseRate,
-
-        @NotNull
-        @DecimalMin(value = "0.0", inclusive = true)
-        @DecimalMax(value = "1.0", inclusive = true)
-        double physioInputWeight,
-
-        @NotNull
-        @DecimalMin(value = "0.0", inclusive = true)
-        @DecimalMax(value = "1.0", inclusive = true)
-        double physioLikelihood,
-
-        @NotNull
-        @DecimalMin(value = "0.0", inclusive = true)
-        @DecimalMax(value = "1.0", inclusive = true)
-        double physioConfidence,
-
-        @NotNull
-        @DecimalMin(value = "0.0", inclusive = true)
-        @DecimalMax(value = "1.0", inclusive = true)
-        @JsonAlias({"physioBaseRate", "physiologicalBaseRate"})
-        double physioBaseRate
 ){}

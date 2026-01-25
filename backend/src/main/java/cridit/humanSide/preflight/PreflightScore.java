@@ -19,7 +19,6 @@ public final class PreflightScore {
             double preflightScore,
             double behaviorBaseRate,
             double feedbackBaseRate,
-            double physioBaseRate,
             double initialUncertainty,
             double initialThreshold
     ) {
@@ -59,7 +58,6 @@ public final class PreflightScore {
         return new ScoreResult(
                 score,
                 0.0,
-                round3(baseRate),
                 round3(baseRate),
                 round3(uncertainty),
                 round3(threshold)

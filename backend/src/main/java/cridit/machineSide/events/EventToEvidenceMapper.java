@@ -11,9 +11,10 @@ public class EventToEvidenceMapper {
 
     public Evidence mapBaselineScore(double baselineScore, String modelId) {
         double clamped = clamp01(baselineScore);
-        double trustworthyMass = sigmoid(clamped - 0.5) * 0.8;
-        double untrustworthyMass = (1 - sigmoid(clamped - 0.5)) * 0.8;
-        double uncertaintyMass = 0.2;
+        // Preserve the baseline trust score when this is the only evidence.
+        double uncertaintyMass = Math.min(0.2, 2.0 * (1.0 - clamped));
+        double trustworthyMass = clamp01((2.0 * clamped - uncertaintyMass) / 2.0);
+        double untrustworthyMass = clamp01(1.0 - trustworthyMass - uncertaintyMass);
         double[] masses = normalize(trustworthyMass, untrustworthyMass, uncertaintyMass);
         String key = "baseline_" + sanitize(modelId);
         return new Evidence(key, masses[0], masses[1], masses[2]);
