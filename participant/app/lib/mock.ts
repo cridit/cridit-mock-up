@@ -129,6 +129,7 @@ const FINANCIAL_PRECHECK_FIELDS = [
   { key: "financeUsageFrequency", min: 1, max: 7 },
   { key: "calculationAccuracyImportance", min: 1, max: 7 },
   { key: "consistencyImportance", min: 1, max: 7 },
+  { key: "predictabilityImportance", min: 1, max: 7 },
   { key: "assumptionTransparencyImportance", min: 1, max: 7 },
   { key: "traceabilityImportance", min: 1, max: 7 },
   { key: "auditabilityImportance", min: 1, max: 7 },
@@ -147,6 +148,7 @@ const HIRING_PRECHECK_FIELDS = [
   { key: "hrFairnessImportance", min: 1, max: 7 },
   { key: "hrClassificationAccuracyImportance", min: 1, max: 7 },
   { key: "hrConsistencyImportance", min: 1, max: 7 },
+  { key: "hrPredictabilityImportance", min: 1, max: 7 },
   { key: "hrFeedbackQualityImportance", min: 1, max: 7 },
   { key: "hrToneProfessionalismImportance", min: 1, max: 7 },
   { key: "hrHumanOversightImportance", min: 1, max: 7 },
@@ -164,6 +166,8 @@ const LEGAL_PRECHECK_FIELDS = [
   { key: "legalHumanOversightImportance", min: 1, max: 7 },
   { key: "legalAccountabilityImportance", min: 1, max: 7 },
   { key: "legalUncertaintyCommunicationImportance", min: 1, max: 7 },
+  { key: "legalConsistencyImportance", min: 1, max: 7 },
+  { key: "legalPredictabilityImportance", min: 1, max: 7 },
 ] as const;
 
 export const mockPreflightParams = (preflight: Record<string, unknown>) => {
@@ -192,14 +196,12 @@ export const mockPreflightParams = (preflight: Record<string, unknown>) => {
   const normalized = clamp(avg, 0, 1);
   const behaviorBaseRate = clamp(0.4 + normalized * 0.4, 0.2, 0.85);
   const feedbackBaseRate = clamp(0.3 + normalized * 0.4, 0.2, 0.8);
-  const physioBaseRate = clamp(0.2 + normalized * 0.3, 0.1, 0.6);
   const initialUncertainty = clamp(0.2 + (1 - normalized) * 0.35, 0.15, 0.55);
   const initialThreshold = clamp(0.08 + (1 - normalized) * 0.12, 0.06, 0.2);
   return {
     preflightScore: Number(normalized.toFixed(3)),
     behaviorBaseRate: Number(behaviorBaseRate.toFixed(3)),
     feedbackBaseRate: Number(feedbackBaseRate.toFixed(3)),
-    physioBaseRate: Number(physioBaseRate.toFixed(3)),
     initialUncertainty: Number(initialUncertainty.toFixed(3)),
     initialThreshold: Number(initialThreshold.toFixed(3)),
   };

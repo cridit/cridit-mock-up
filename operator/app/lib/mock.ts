@@ -115,14 +115,12 @@ export const mockPreflightParams = (preflight: Record<string, unknown>) => {
   const normalized = clamp((avg - 1) / 6, 0, 1);
   const behaviorBaseRate = clamp(0.4 + normalized * 0.4, 0.2, 0.85);
   const feedbackBaseRate = clamp(0.3 + normalized * 0.4, 0.2, 0.8);
-  const physioBaseRate = clamp(0.2 + normalized * 0.3, 0.1, 0.6);
   const initialUncertainty = clamp(0.2 + (1 - normalized) * 0.35, 0.15, 0.55);
   const initialThreshold = clamp(0.08 + (1 - normalized) * 0.12, 0.06, 0.2);
   return {
     preflightScore: Number(normalized.toFixed(3)),
     behaviorBaseRate: Number(behaviorBaseRate.toFixed(3)),
     feedbackBaseRate: Number(feedbackBaseRate.toFixed(3)),
-    physioBaseRate: Number(physioBaseRate.toFixed(3)),
     initialUncertainty: Number(initialUncertainty.toFixed(3)),
     initialThreshold: Number(initialThreshold.toFixed(3)),
   };

@@ -502,17 +502,16 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
     const sendTrustCues = async (message: string) => {
       const ratingRaw = (document.getElementById("feedback-rating") as HTMLSelectElement | null)?.value;
       const rating = ratingRaw ? Number(ratingRaw) : null;
-      const emotion =
-        (document.getElementById("feedback-emotion") as HTMLSelectElement | null)?.value || "neutral";
+      const selfConfidence =
+        (document.getElementById("self-confidence") as HTMLSelectElement | null)?.value || "neutral";
+      const interactionId = `interaction-${Date.now()}`;
       const feedbackLikelihood =
         typeof rating === "number" ? clamp((rating - 1) / 4, 0, 1) : 0;
       const feedbackWeight = typeof rating === "number" ? 0.25 : 0;
       const behaviorWeight = 0.55;
-      const physioWeight = 0;
-      const weightSum = behaviorWeight + feedbackWeight + physioWeight;
+      const weightSum = behaviorWeight + feedbackWeight;
       const behaviorInputWeight = weightSum > 0 ? behaviorWeight / weightSum : 1;
       const feedbackInputWeight = weightSum > 0 ? feedbackWeight / weightSum : 0;
-      const physioInputWeight = weightSum > 0 ? physioWeight / weightSum : 0;
 
       const scenarioKey = scenarioRef.current.key;
       const evidence =
@@ -548,7 +547,7 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
       const payload = {
         participantId: null,
         sessionId: `${scenarioKey}-session`,
-        interactionId: `interaction-${Date.now()}`,
+        interactionId,
         timestamp: new Date().toISOString(),
         benchmarkMetricRequest: benchmarkRequest,
         humanInputRequest: {
@@ -560,23 +559,18 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
           feedbackLikelihood,
           feedbackConfidence: feedbackInputWeight > 0 ? 0.7 : 0,
           feedbackBaseRate: 0.4,
-          physioInputWeight,
-          physioLikelihood: 0,
-          physioConfidence: 0,
-          physioBaseRate: 0,
         },
         feedbackInput: {
           rating,
           feedbackText: message || "",
-          emotionalState: emotion,
+          selfConfidence,
           satisfaction: null,
           helpfulness: null,
           trustCueUsefulness: null,
           trustFactors: [],
           timestamp: new Date().toISOString(),
-          interactionId: `interaction-${Date.now()}`,
-        },
-        proxyPhysioInput: null,
+          interactionId,
+      },
         error: 0.15,
         risk: 0.25,
         riskPerception: null,
@@ -661,6 +655,16 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
         appendLog(
           `Calibration error: ${error instanceof Error ? error.message : String(error)}`,
         );
+      }
+      if (rating !== null || message) {
+        postChatMessage("system", message || "", "interaction_feedback", {
+          rating,
+          selfConfidence,
+          satisfaction: null,
+          helpfulness: null,
+          trustCueUsefulness: null,
+          interactionId,
+        });
       }
     };
 
@@ -827,7 +831,19 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
       });
     };
 
-    const postChatMessage = async (role: string, text: string, source: string) => {
+    const postChatMessage = async (
+      role: string,
+      text: string,
+      source: string,
+      meta?: {
+        rating?: number | null;
+        selfConfidence?: string | null;
+        satisfaction?: string | null;
+        helpfulness?: string | null;
+        trustCueUsefulness?: string | null;
+        interactionId?: string | null;
+      },
+    ) => {
       try {
         const response = await fetch(`${chatBaseUrl}/chat/${scenario.key}`, {
           method: "POST",
@@ -838,6 +854,12 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
             source,
             clientId,
             taskId: activeTaskId,
+            rating: meta?.rating ?? null,
+            selfConfidence: meta?.selfConfidence ?? null,
+            satisfaction: meta?.satisfaction ?? null,
+            helpfulness: meta?.helpfulness ?? null,
+            trustCueUsefulness: meta?.trustCueUsefulness ?? null,
+            interactionId: meta?.interactionId ?? null,
             timestamp: Date.now(),
           }),
         });
@@ -904,6 +926,9 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
                 lastChatId = message.id;
               }
               if (message.clientId && message.clientId === clientId) {
+                return;
+              }
+              if (message.source === "interaction_feedback") {
                 return;
               }
               if (message.role === "user") {
@@ -1184,8 +1209,8 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
             </div>
             <div className="feedback-controls">
               <label>
-                Feeling (self-report)
-                <select id="feedback-emotion">
+                Self-confidence (self-report)
+                <select id="self-confidence">
                   <option value="neutral">Neutral</option>
                   <option value="confident">Confident</option>
                   <option value="uncertain">Uncertain</option>
@@ -1194,7 +1219,7 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
                 </select>
               </label>
               <label>
-                Trust rating (1-5)
+                Reliance rating (1-5)
                 <select id="feedback-rating">
                   <option value="">Select</option>
                   <option value="1">1</option>

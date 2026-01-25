@@ -20,7 +20,7 @@ public class ChatHistoryStore {
     public ChatHistoryStore(
             ObjectMapper objectMapper,
             @ConfigProperty(name = "cridit.chat.history.path",
-                    defaultValue = "target/cridit-chat-history.jsonl")
+                    defaultValue = "src/main/resources/cridit-chat-history.jsonl")
             String historyPath
     ) {
         this.objectMapper = objectMapper;
@@ -39,6 +39,12 @@ public class ChatHistoryStore {
                 message.text,
                 message.source,
                 message.clientId,
+                message.rating,
+                message.selfConfidence,
+                message.satisfaction,
+                message.helpfulness,
+                message.trustCueUsefulness,
+                message.interactionId,
                 message.timestamp
         );
         append(entry);

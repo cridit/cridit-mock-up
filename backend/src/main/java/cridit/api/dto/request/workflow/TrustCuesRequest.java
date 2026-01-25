@@ -3,7 +3,6 @@ package cridit.api.dto.request.workflow;
 import com.fasterxml.jackson.annotation.JsonAlias;
 import cridit.api.dto.request.human.FrontendFeedbackInput;
 import cridit.api.dto.request.human.HumanInputRequest;
-import cridit.api.dto.request.human.ProxyPhysioInput;
 import cridit.api.dto.request.machine.EvidenceRequest;
 
 public record TrustCuesRequest(
@@ -11,11 +10,10 @@ public record TrustCuesRequest(
   String sessionId,
   String interactionId,
   String timestamp,
-  @JsonAlias("benchmarkMetricRequest")
+  @JsonAlias("evidenceRequest")
   EvidenceRequest evidenceRequest,
   HumanInputRequest humanInputRequest,
   FrontendFeedbackInput feedbackInput,
-  ProxyPhysioInput proxyPhysioInput,
   double error,
   double risk,
   Double riskPerception,
@@ -26,7 +24,6 @@ public record TrustCuesRequest(
   String conflictRedistribution,
   String thresholdNature,
   Double initialThreshold,
-  RiskInputRequest riskInput,
   String cueVisibility,
   String cueReliability,
   Double cueBaseTrust,

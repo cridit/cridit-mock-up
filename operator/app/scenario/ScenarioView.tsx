@@ -202,6 +202,7 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
   const selectedTaskRef = useRef<string | null>(null);
   const selectedVariantRef = useRef<string | null>(null);
   const sendOperatorMessageRef = useRef<((text: string) => void) | null>(null);
+  const recordCalibrationUpdateRef = useRef<((promptOverride?: string) => Promise<void>) | null>(null);
   const trustHistoryRef = useRef<Array<{ human: number; machine: number }>>([]);
   const gapHistoryRef = useRef<number[]>([]);
   const scenarioKeyRef = useRef(scenario.key);
@@ -311,6 +312,9 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
             timestamp: Date.now(),
           }),
         }).catch(() => {});
+        if (recordCalibrationUpdateRef.current) {
+          await recordCalibrationUpdateRef.current(prompt);
+        }
       }
       sendOperatorMessageRef.current(data.responseText);
       setScriptedStatus("OpenAI response sent to participant.");
@@ -563,13 +567,13 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
 
     const buildCalibrationKey = (payload: {
       timestamp?: string;
-      humanTrustScore?: number;
-      machineTrustScore?: number;
-      humanMachineTrustGap?: number;
-      threshold?: number;
+      humanTrustScore?: number | null;
+      machineTrustScore?: number | null;
+      humanMachineTrustGap?: number | null;
+      threshold?: number | null;
       decision?: string;
     }) => {
-      const toKey = (value?: number) =>
+      const toKey = (value?: number | null) =>
         typeof value === "number" && Number.isFinite(value)
           ? value.toFixed(3)
           : "n/a";
@@ -599,34 +603,44 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
       return "NO ACTION";
     };
 
-    const recordCalibrationUpdate = async () => {
+    const recordCalibrationUpdate = async (promptOverride?: string) => {
       const humanText = document.getElementById("human-trust")?.textContent || "n/a";
       const machineText = document.getElementById("machine-trust")?.textContent || "n/a";
       const thresholdText = document.getElementById("threshold-value")?.textContent || "n/a";
       const human = Number(humanText);
       const machine = Number(machineText);
       const threshold = Number(thresholdText);
-      if (!Number.isFinite(human) || !Number.isFinite(machine)) {
+      if ((!Number.isFinite(human) || !Number.isFinite(machine)) && !promptOverride) {
         return;
       }
       const resolvedThreshold = Number.isFinite(threshold)
         ? threshold
         : scenarioRef.current.threshold;
-      const gap = human - machine;
-      const decision = computeDecisionFromGap(gap, resolvedThreshold);
+      const hasScores = Number.isFinite(human) && Number.isFinite(machine);
+      const gap = hasScores ? human - machine : NaN;
+      const decision =
+        hasScores && Number.isFinite(resolvedThreshold)
+          ? computeDecisionFromGap(gap, resolvedThreshold)
+          : "NO ACTION";
       const payload = {
         scenarioKey,
         taskId: selectedTaskRef.current ?? null,
-        humanTrustScore: Number(human.toFixed(3)),
-        machineTrustScore: Number(machine.toFixed(3)),
-        humanMachineTrustGap: Number(gap.toFixed(3)),
-        threshold: Number(resolvedThreshold.toFixed(3)),
+        humanTrustScore: hasScores ? Number(human.toFixed(3)) : null,
+        machineTrustScore: hasScores ? Number(machine.toFixed(3)) : null,
+        humanMachineTrustGap: hasScores ? Number(gap.toFixed(3)) : null,
+        threshold: Number.isFinite(resolvedThreshold)
+          ? Number(resolvedThreshold.toFixed(3))
+          : null,
         decision,
         conflictRedistribution: "manual",
         thresholdNature: "manual",
+        prompt: promptOverride?.trim() || null,
         timestamp: new Date().toISOString(),
       };
-      const calibrationKey = buildCalibrationKey(payload);
+      const calibrationKey = [
+        buildCalibrationKey(payload),
+        promptOverride?.trim() || "",
+      ].join("|");
       if (calibrationKey && calibrationKey === lastCalibrationKeyRef.current) {
         return;
       }
@@ -641,6 +655,7 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
         // ignore recording errors
       }
     };
+    recordCalibrationUpdateRef.current = recordCalibrationUpdate;
 
     const toggleCueCards = () => {
       const cues = document.getElementById("trust-cues-list");
@@ -688,17 +703,15 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
     const sendTrustCues = async (message: string) => {
       const ratingRaw = (document.getElementById("feedback-rating") as HTMLSelectElement | null)?.value;
       const rating = ratingRaw ? Number(ratingRaw) : null;
-      const emotion =
-        (document.getElementById("feedback-emotion") as HTMLSelectElement | null)?.value || "neutral";
+      const selfConfidence =
+        (document.getElementById("self-confidence") as HTMLSelectElement | null)?.value || "neutral";
       const feedbackLikelihood =
         typeof rating === "number" ? clamp((rating - 1) / 4, 0, 1) : 0;
       const feedbackWeight = typeof rating === "number" ? 0.25 : 0;
       const behaviorWeight = 0.55;
-      const physioWeight = 0;
-      const weightSum = behaviorWeight + feedbackWeight + physioWeight;
+      const weightSum = behaviorWeight + feedbackWeight;
       const behaviorInputWeight = weightSum > 0 ? behaviorWeight / weightSum : 1;
       const feedbackInputWeight = weightSum > 0 ? feedbackWeight / weightSum : 0;
-      const physioInputWeight = weightSum > 0 ? physioWeight / weightSum : 0;
 
       const evidence =
         evidenceByScenario[scenarioKey as keyof typeof evidenceByScenario] ||
@@ -730,15 +743,11 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
           feedbackLikelihood,
           feedbackConfidence: feedbackInputWeight > 0 ? 0.7 : 0,
           feedbackBaseRate: 0.4,
-          physioInputWeight,
-          physioLikelihood: 0,
-          physioConfidence: 0,
-          physioBaseRate: 0,
         },
         feedbackInput: {
           rating,
           feedbackText: message || "",
-          emotionalState: emotion,
+          selfConfidence,
           satisfaction: null,
           helpfulness: null,
           trustCueUsefulness: null,
@@ -746,7 +755,6 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
           timestamp: new Date().toISOString(),
           interactionId: `interaction-${Date.now()}`,
         },
-        proxyPhysioInput: null,
         error: 0.15,
         risk: 0.25,
         riskPerception: null,
@@ -1031,13 +1039,12 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
       };
 
       submitButton.addEventListener("click", async () => {
-        const behaviorInputWeight = clamp(readNumber("human-behavior-weight", 0.55), 0, 1);
-        const feedbackInputWeight = clamp(readNumber("human-feedback-weight", 0.25), 0, 1);
-        const physioInputWeight = clamp(readNumber("human-physio-weight", 0.2), 0, 1);
-        const weightSum = behaviorInputWeight + feedbackInputWeight + physioInputWeight;
+        const behaviorInputWeight = clamp(readNumber("human-behavior-weight", 0.7), 0, 1);
+        const feedbackInputWeight = clamp(readNumber("human-feedback-weight", 0.3), 0, 1);
+        const weightSum = behaviorInputWeight + feedbackInputWeight;
         if (Math.abs(weightSum - 1) > 1e-6) {
           appendLog(
-            `Human trust not refreshed: behavior + feedback + physio weights must sum to 1 (now ${weightSum.toFixed(2)}).`,
+            `Human trust not refreshed: behavior + feedback weights must sum to 1 (now ${weightSum.toFixed(2)}).`,
           );
           return;
         }
@@ -1051,10 +1058,6 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
           feedbackLikelihood: clamp(readNumber("human-feedback-likelihood", 0.75), 0, 1),
           feedbackConfidence: clamp(readNumber("human-feedback-confidence", 0.6), 0, 1),
           feedbackBaseRate: clamp(readNumber("human-feedback-base", 0.7), 0, 1),
-          physioInputWeight,
-          physioLikelihood: clamp(readNumber("human-physio-likelihood", 0.75), 0, 1),
-          physioConfidence: clamp(readNumber("human-physio-confidence", 0.6), 0, 1),
-          physioBaseRate: clamp(readNumber("human-physio-base", 0.6), 0, 1),
         };
 
         try {
@@ -1313,6 +1316,9 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
               if (message.clientId && message.clientId === clientId) {
                 return;
               }
+              if (message.source === "interaction_feedback") {
+                return;
+              }
               if (message.source === "participant" && message.role === "user" && isOperator) {
                 if (message.taskId) {
                   currentTaskId = message.taskId;
@@ -1359,6 +1365,7 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
       if (inputPoll) {
         window.clearInterval(inputPoll);
       }
+      recordCalibrationUpdateRef.current = null;
     };
   }, [backendUrl, isOperator, scenario.key]);
 
@@ -1458,8 +1465,8 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
             </div>
             <div className="feedback-controls">
               <label>
-                Feeling (self-report)
-                <select id="feedback-emotion">
+                Self-confidence (self-report)
+                <select id="self-confidence">
                   <option value="neutral">Neutral</option>
                   <option value="confident">Confident</option>
                   <option value="uncertain">Uncertain</option>
@@ -1468,7 +1475,7 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
                 </select>
               </label>
               <label>
-                Trust rating (1-5)
+                Reliance rating (1-5)
                 <select id="feedback-rating">
                   <option value="">Select</option>
                   <option value="1">1</option>
@@ -1654,15 +1661,15 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
           <div className="evidence-panel">
             <h3>Human Feedback Inputs</h3>
             <p className="muted">
-              Use these inputs to estimate human trust from behavior, feedback, and physiology.
-              Current human score: <strong id="human-score-preview">n/a</strong>
+              Use these inputs to estimate human trust from behavior and feedback. Current human score:{" "}
+              <strong id="human-score-preview">n/a</strong>
             </p>
             <div className="evidence-table">
               <div className="evidence-row">
                 <div className="evidence-label">Behavior</div>
                 <label>
                   Weight
-                  <input id="human-behavior-weight" type="number" min="0" max="1" step="0.01" defaultValue="0.55" />
+                  <input id="human-behavior-weight" type="number" min="0" max="1" step="0.01" defaultValue="0.7" />
                 </label>
                 <label>
                   Adopted
@@ -1681,7 +1688,7 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
                 <div className="evidence-label">Feedback</div>
                 <label>
                   Weight
-                  <input id="human-feedback-weight" type="number" min="0" max="1" step="0.01" defaultValue="0.25" />
+                  <input id="human-feedback-weight" type="number" min="0" max="1" step="0.01" defaultValue="0.3" />
                 </label>
                 <label>
                   Likelihood
@@ -1694,25 +1701,6 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
                 <label>
                   Base rate
                   <input id="human-feedback-base" type="number" min="0" max="1" step="0.01" defaultValue="0.7" />
-                </label>
-              </div>
-              <div className="evidence-row">
-                <div className="evidence-label">Physio</div>
-                <label>
-                  Weight
-                  <input id="human-physio-weight" type="number" min="0" max="1" step="0.01" defaultValue="0.2" />
-                </label>
-                <label>
-                  Likelihood
-                  <input id="human-physio-likelihood" type="number" min="0" max="1" step="0.01" defaultValue="0.75" />
-                </label>
-                <label>
-                  Confidence
-                  <input id="human-physio-confidence" type="number" min="0" max="1" step="0.01" defaultValue="0.6" />
-                </label>
-                <label>
-                  Base rate
-                  <input id="human-physio-base" type="number" min="0" max="1" step="0.01" defaultValue="0.6" />
                 </label>
               </div>
             </div>

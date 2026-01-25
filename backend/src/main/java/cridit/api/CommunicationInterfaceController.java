@@ -88,6 +88,12 @@ public class CommunicationInterfaceController {
         message.taskId,
         timestamp
     );
+    stored.rating = message.rating;
+    stored.selfConfidence = message.selfConfidence;
+    stored.satisfaction = message.satisfaction;
+    stored.helpfulness = message.helpfulness;
+    stored.trustCueUsefulness = message.trustCueUsefulness;
+    stored.interactionId = message.interactionId;
     CHAT_STORE.computeIfAbsent(scenario, key -> new CopyOnWriteArrayList<>()).add(stored);
     if (chatHistoryStore != null) {
       chatHistoryStore.record(scenario, stored);

@@ -7,6 +7,12 @@ public class ChatMessage {
   public String source;
   public String clientId;
   public String taskId;
+  public Integer rating;
+  public String selfConfidence;
+  public String satisfaction;
+  public String helpfulness;
+  public String trustCueUsefulness;
+  public String interactionId;
   public long timestamp;
 
   public ChatMessage() {}

@@ -27,13 +27,6 @@ public class SubjectiveLogic {
         return getQualitativeOpinion(report.getLikelihood(), report.getConfidence(), report.getBaseRate());
     }
 
-    public Opinion getPhysioOpinion(PhysiologicalReport report) {
-        if (report == null) {
-            throw new NullPointerException("Physiological report is null");
-        }
-        return getQualitativeOpinion(report.getLikelihood(), report.getConfidence(), report.getBaseRate());
-    }
-
     public Opinion getQualitativeOpinion(double likelihood, double confidence, double baseRate) {
         if (likelihood < 0.0 || likelihood > 1.0) {
             throw new IllegalArgumentException("likelihood must be in [0,1]");

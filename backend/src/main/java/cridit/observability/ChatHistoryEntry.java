@@ -8,6 +8,12 @@ public record ChatHistoryEntry(
         String text,
         String source,
         String clientId,
+        Integer rating,
+        String selfConfidence,
+        String satisfaction,
+        String helpfulness,
+        String trustCueUsefulness,
+        String interactionId,
         long timestamp
 ) {
 }

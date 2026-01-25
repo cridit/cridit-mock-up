@@ -11,42 +11,22 @@ public class HumanSideTrustEvaluation {
 
     private double behaviorInputWeight;
     private double feedbackInputWeight;
-    private double physioInputWeight;
 
-    public double getHumanTrustScoreWithPreflight(double behaviorInputWeight, int adopted, int rejected,
-                                                  PreflightScore.Response preflightResponse,
-                                                  double feedbackInputWeight, Report feedbackReport,
-                                                  double physioInputWeight, PhysiologicalReport physioReport) {
-        this.behaviorInputWeight = behaviorInputWeight;
-        this.feedbackInputWeight = feedbackInputWeight;
-        this.physioInputWeight = physioInputWeight;
-
-        double baseRate = PreflightScore.computeScore(preflightResponse).feedbackBaseRate();
-        Adoption adoption = new Adoption(adopted, rejected, baseRate);
-        if (adopted + rejected == 0) {
-            if (feedbackInputWeight + physioInputWeight == 0.0) {
-                throw new IllegalArgumentException("At least one human input weight must be non-zero");
-            }
-            Opinion feedbackOpinion = feedbackInputWeight == 0.0 ? null : subjectiveLogic.getFeedbackOpinion(feedbackReport);
-            Opinion physioOpinion = physioInputWeight == 0.0 ? null : subjectiveLogic.getPhysioOpinion(physioReport);
-            Opinion fusedOpinion = fuseOpinions(null, feedbackOpinion, physioOpinion);
-            return subjectiveLogic.getHumanTrustLevel(fusedOpinion);
+    public double getHumanTrustScoreWithPreflight(PreflightScore.Response preflightResponse) {
+        if (preflightResponse == null) {
+            throw new IllegalArgumentException("Preflight response is required");
         }
-        return getHumanTrustScore(behaviorInputWeight, adoption, feedbackInputWeight, feedbackReport,
-                physioInputWeight, physioReport);
+        return PreflightScore.computeScore(preflightResponse).preflightScore();
     }
 
     public double getHumanTrustScore(double behaviorInputWeight, Adoption adoption,
-                                     double feedbackInputWeight, Report feedbackReport,
-                                     double physioInputWeight, PhysiologicalReport physioReport) {
+                                     double feedbackInputWeight, Report feedbackReport) {
         this.behaviorInputWeight = behaviorInputWeight;
         this.feedbackInputWeight = feedbackInputWeight;
-        this.physioInputWeight = physioInputWeight;
-        validateWeights(behaviorInputWeight, feedbackInputWeight, physioInputWeight);
+        validateWeights(behaviorInputWeight, feedbackInputWeight);
 
         Opinion behaviorOpinion = null;
         Opinion feedbackOpinion = null;
-        Opinion physioOpinion = null;
 
         if (behaviorInputWeight != 0.0) {
             behaviorOpinion = subjectiveLogic.getBehaviorOpinion(adoption);
@@ -54,11 +34,8 @@ public class HumanSideTrustEvaluation {
         if (feedbackInputWeight != 0.0) {
             feedbackOpinion = subjectiveLogic.getFeedbackOpinion(feedbackReport);
         }
-        if (physioInputWeight != 0.0) {
-            physioOpinion = subjectiveLogic.getPhysioOpinion(physioReport);
-        }
 
-        Opinion fusedOpinion = fuseOpinions(behaviorOpinion, feedbackOpinion, physioOpinion);
+        Opinion fusedOpinion = fuseOpinions(behaviorOpinion, feedbackOpinion);
         return subjectiveLogic.getHumanTrustLevel(fusedOpinion);
     }
 
@@ -68,29 +45,16 @@ public class HumanSideTrustEvaluation {
         return trustScore * (1.0 - riskPerception);
     }
 
-    private Opinion fuseOpinions(Opinion behaviorOpinion, Opinion feedbackOpinion, Opinion physioOpinion) {
-        double[] weights = effectiveWeights(behaviorOpinion != null, feedbackOpinion != null, physioOpinion != null);
+    private Opinion fuseOpinions(Opinion behaviorOpinion, Opinion feedbackOpinion) {
+        double[] weights = effectiveWeights(behaviorOpinion != null, feedbackOpinion != null);
         Opinion weightedBehavior = behaviorOpinion == null
                 ? null
                 : subjectiveLogic.discountByWeight(weights[0], behaviorOpinion);
         Opinion weightedFeedback = feedbackOpinion == null
                 ? null
                 : subjectiveLogic.discountByWeight(weights[1], feedbackOpinion);
-        Opinion weightedPhysio = physioOpinion == null
-                ? null
-                : subjectiveLogic.discountByWeight(weights[2], physioOpinion);
-
-        if (weightedBehavior != null && weightedFeedback != null && weightedPhysio != null) {
-            return subjectiveLogic.consensus(weightedBehavior, weightedFeedback, weightedPhysio);
-        }
         if (weightedBehavior != null && weightedFeedback != null) {
             return subjectiveLogic.consensus(weightedBehavior, weightedFeedback);
-        }
-        if (weightedBehavior != null && weightedPhysio != null) {
-            return subjectiveLogic.consensus(weightedBehavior, weightedPhysio);
-        }
-        if (weightedFeedback != null && weightedPhysio != null) {
-            return subjectiveLogic.consensus(weightedFeedback, weightedPhysio);
         }
         if (weightedBehavior != null) {
             return weightedBehavior;
@@ -98,14 +62,11 @@ public class HumanSideTrustEvaluation {
         if (weightedFeedback != null) {
             return weightedFeedback;
         }
-        if (weightedPhysio != null) {
-            return weightedPhysio;
-        }
         throw new IllegalArgumentException("At least one human input must be provided");
     }
 
-    private void validateWeights(double behaviorWeight, double feedbackWeight, double physioWeight) {
-        double sum = behaviorWeight + feedbackWeight + physioWeight;
+    private void validateWeights(double behaviorWeight, double feedbackWeight) {
+        double sum = behaviorWeight + feedbackWeight;
         if (sum == 0.0) {
             throw new IllegalArgumentException("At least one human input weight must be non-zero");
         }
@@ -120,14 +81,13 @@ public class HumanSideTrustEvaluation {
         }
     }
 
-    private double[] effectiveWeights(boolean hasBehavior, boolean hasFeedback, boolean hasPhysio) {
+    private double[] effectiveWeights(boolean hasBehavior, boolean hasFeedback) {
         double wb = hasBehavior ? Math.pow(behaviorInputWeight, WEIGHT_POWER) : 0.0;
         double wf = hasFeedback ? Math.pow(feedbackInputWeight, WEIGHT_POWER) : 0.0;
-        double wp = hasPhysio ? Math.pow(physioInputWeight, WEIGHT_POWER) : 0.0;
-        double sum = wb + wf + wp;
+        double sum = wb + wf;
         if (sum == 0.0) {
-            return new double[]{0.0, 0.0, 0.0};
+            return new double[]{0.0, 0.0};
         }
-        return new double[]{wb / sum, wf / sum, wp / sum};
+        return new double[]{wb / sum, wf / sum};
     }
 }

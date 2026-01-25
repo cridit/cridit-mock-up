@@ -17,7 +17,6 @@ export type PreflightAnswers = {
 export type SessionParams = {
   behaviorBaseRate: number;
   feedbackBaseRate: number;
-  physioBaseRate: number;
   initialUncertainty: number;
   initialThreshold: number;
 };

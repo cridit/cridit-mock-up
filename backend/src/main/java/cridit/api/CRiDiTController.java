@@ -7,7 +7,6 @@ import cridit.api.dto.request.human.PreflightRequest;
 import cridit.api.dto.request.workflow.TrustCuesRequest;
 import cridit.api.dto.request.workflow.CalibrationRecordRequest;
 import cridit.api.dto.request.workflow.PostflightRequest;
-import cridit.api.dto.request.workflow.PostflightCalibrationRequest;
 import cridit.api.dto.request.machine.TrustEventRequest;
 import cridit.api.dto.response.machine.MachineTrustEventResponse;
 import cridit.api.dto.response.workflow.PostflightSummary;
@@ -20,7 +19,6 @@ import cridit.humanSide.Feedback.Report;
 import cridit.humanSide.HumanSideTrustEvaluation;
 import cridit.machineSide.MachineSideTrustEvaluation;
 import cridit.humanSide.preflight.PreflightScore;
-import cridit.humanSide.PhysiologicalReport;
 import cridit.machineSide.events.MachineTrustEventService;
 import cridit.observability.CRiDiTObservability;
 import cridit.observability.CalibrationHistoryEntry;
@@ -112,31 +110,8 @@ public class CRiDiTController {
     @POST
     @Path("/evaluation/score/human/preflight")
     public double getHumanTrustScoreWithPreflight(PreflightHumanInputRequest request) {
-        HumanInputRequest humanInputRecord = request.humanInput();
         PreflightScore.Response preflightResponse = request.preflight().toResponse();
-
-        Report feedbackReport = new Report(
-                humanInputRecord.feedbackLikelihood(),
-                humanInputRecord.feedbackConfidence(),
-                humanInputRecord.feedbackBaseRate()
-        );
-        PhysiologicalReport physioReport = new PhysiologicalReport(
-                humanInputRecord.physioLikelihood(),
-                humanInputRecord.physioConfidence(),
-                humanInputRecord.physioBaseRate()
-        );
-
-        double score = humanSideTrustEvaluation.getHumanTrustScoreWithPreflight(
-                humanInputRecord.behaviorInputWeight(),
-                humanInputRecord.adopted(),
-                humanInputRecord.rejected(),
-                preflightResponse,
-                humanInputRecord.feedbackInputWeight(),
-                feedbackReport,
-                humanInputRecord.physioInputWeight(),
-                physioReport
-        );
-        return score;
+        return humanSideTrustEvaluation.getHumanTrustScoreWithPreflight(preflightResponse);
     }
 
     @POST
@@ -187,6 +162,7 @@ public class CRiDiTController {
                 request.decision(),
                 request.conflictRedistribution(),
                 request.thresholdNature(),
+                request.prompt(),
                 request.timestamp()
         );
     }
@@ -202,18 +178,6 @@ public class CRiDiTController {
     @Path("/postflight")
     public List<PostflightSummary> listPostflightSummaries() {
         return postflightService.listSummaries();
-    }
-
-    @POST
-    @Path("/postflight/calibration")
-    public PostflightSummary updatePostflightCalibration(PostflightCalibrationRequest request) {
-        return postflightService.updateCalibration(
-                request.sessionId(),
-                request.calibrationDecision(),
-                request.calibrationGap(),
-                request.calibrationMachineScore(),
-                request.calibrationHumanScore()
-        );
     }
 
     @GET
@@ -284,19 +248,12 @@ public class CRiDiTController {
                 humanInputRecord.feedbackConfidence(),
                 humanInputRecord.feedbackBaseRate()
         );
-        PhysiologicalReport physioReport = new PhysiologicalReport(
-                humanInputRecord.physioLikelihood(),
-                humanInputRecord.physioConfidence(),
-                humanInputRecord.physioBaseRate()
-        );
 
         return humanSideTrustEvaluation.getHumanTrustScore(
                 humanInputRecord.behaviorInputWeight(),
                 adoption,
                 humanInputRecord.feedbackInputWeight(),
-                feedbackReport,
-                humanInputRecord.physioInputWeight(),
-                physioReport
+                feedbackReport
         );
     }
 }

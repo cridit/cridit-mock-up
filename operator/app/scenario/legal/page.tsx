@@ -1,4 +1,4 @@
-import { OperatorScenarioClient } from "../../OperatorScenarioClient";
+import { OperatorScenarioClient } from "../OperatorScenarioClient";
 
 export default function LegalOperatorPage() {
   return <OperatorScenarioClient scenarioKey="legal" />;
