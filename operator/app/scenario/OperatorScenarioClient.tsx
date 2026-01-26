@@ -8,7 +8,7 @@ type OperatorScenarioClientProps = {
   scenarioKey: ScenarioKey;
 };
 
-const BACKEND_URL = "http://cridit:8001";
+const BACKEND_URL = "http://cridit-mock-up:8001";
 const STORAGE_KEY = "cridit-operator-inputs";
 
 export function OperatorScenarioClient({ scenarioKey }: OperatorScenarioClientProps) {

@@ -1,7 +1,6 @@
 package cridit.api.dto.request.workflow;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
-import cridit.api.dto.request.human.FrontendFeedbackInput;
 import cridit.api.dto.request.human.HumanInputRequest;
 import cridit.api.dto.request.machine.EvidenceRequest;
 
@@ -13,7 +12,6 @@ public record TrustCuesRequest(
   @JsonAlias("evidenceRequest")
   EvidenceRequest evidenceRequest,
   HumanInputRequest humanInputRequest,
-  FrontendFeedbackInput feedbackInput,
   double error,
   double risk,
   Double riskPerception,

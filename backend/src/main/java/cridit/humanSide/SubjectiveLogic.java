@@ -24,7 +24,7 @@ public class SubjectiveLogic {
         if (report == null) {
             throw new NullPointerException("Feedback report is null");
         }
-        return getQualitativeOpinion(report.getLikelihood(), report.getConfidence(), report.getBaseRate());
+        return getLikelihoodOpinion(report.getLikelihood(), report.getConfidence(), report.getBaseRate());
     }
 
     public Opinion getQualitativeOpinion(double likelihood, double confidence, double baseRate) {
@@ -41,6 +41,46 @@ public class SubjectiveLogic {
         double d = confidence * (1.0 - likelihood);
         double u = 1.0 - confidence;
         return new Opinion(b, d, u, baseRate);
+    }
+
+    public Opinion getLikelihoodOpinion(double likelihood, double confidence, double baseRate) {
+        if (likelihood < 0.0 || likelihood > 1.0) {
+            throw new IllegalArgumentException("likelihood must be in [0,1]");
+        }
+        if (confidence < 0.0 || confidence > 1.0) {
+            throw new IllegalArgumentException("confidence must be in [0,1]");
+        }
+        if (baseRate < 0.0 || baseRate > 1.0) {
+            throw new IllegalArgumentException("baseRate must be in [0,1]");
+        }
+
+        double u = 1.0 - confidence;
+        double b = likelihood - baseRate * u;
+        double d = 1.0 - u - b;
+
+        b = clamp01(b);
+        d = clamp01(d);
+        double remaining = 1.0 - u;
+        double sum = b + d;
+        if (sum > 0.0) {
+            b = (b / sum) * remaining;
+            d = (d / sum) * remaining;
+        } else {
+            b = remaining * clamp01(likelihood);
+            d = remaining - b;
+        }
+
+        return new Opinion(b, d, u, baseRate);
+    }
+
+    private double clamp01(double value) {
+        if (value < 0.0) {
+            return 0.0;
+        }
+        if (value > 1.0) {
+            return 1.0;
+        }
+        return value;
     }
 
     public Opinion fuse(Opinion behaviorOpinion, Opinion feedbackOpinion, double behaviorInputWeight, double feedbackInputWeight) {

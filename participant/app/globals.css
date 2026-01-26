@@ -189,14 +189,16 @@ body {
   grid-column: span 10;
   display: flex;
   flex-direction: column;
-  min-height: 620px;
+  height: 1000px;
+  overflow: hidden;
 }
 
 .trust {
   grid-column: span 2;
   display: flex;
   flex-direction: column;
-  min-height: 620px;
+  height: 1000px;
+  overflow: hidden;
 }
 
 .logging {
@@ -258,7 +260,7 @@ body {
 .chat {
   display: grid;
   gap: 12px;
-  min-height: 300px;
+  min-height: 0;
   padding: 14px;
   border-radius: 16px;
   border: 1px solid rgba(0, 0, 0, 0.06);
@@ -277,6 +279,31 @@ body {
 .bubble-header {
   font-weight: 600;
   margin-bottom: 4px;
+}
+
+.bubble-body h4,
+.bubble-body h5,
+.bubble-body h6 {
+  margin: 8px 0 6px;
+  font-weight: 600;
+}
+
+.bubble-body p {
+  margin: 0 0 8px;
+}
+
+.bubble-body p:last-child {
+  margin-bottom: 0;
+}
+
+.bubble-body ul,
+.bubble-body ol {
+  margin: 6px 0 8px 18px;
+  padding: 0;
+}
+
+.bubble-body li {
+  margin: 4px 0;
 }
 
 .bubble-body pre {
@@ -327,11 +354,18 @@ body {
   margin-top: 16px;
 }
 
-.input-row input {
+.input-row input,
+.input-row textarea {
   flex: 1;
   padding: 10px 12px;
   border-radius: 12px;
   border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.input-row textarea {
+  resize: vertical;
+  min-height: 72px;
+  font: inherit;
 }
 
 .input-row button {
@@ -537,6 +571,21 @@ body {
   display: block;
   font-size: 0.8rem;
   color: var(--muted);
+}
+
+.trust-warning {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(192, 119, 94, 0.35);
+  background: rgba(192, 119, 94, 0.12);
+  color: var(--ink);
+  font-size: 0.9rem;
+  display: none;
+}
+
+.trust-warning.active {
+  display: block;
 }
 
 .interaction-controls {
@@ -932,6 +981,12 @@ body {
 
   .grid {
     grid-template-columns: 1fr;
+  }
+
+  .conversation,
+  .trust {
+    height: auto;
+    overflow: visible;
   }
 }
 

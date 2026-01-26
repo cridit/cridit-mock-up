@@ -12,6 +12,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -108,6 +110,13 @@ public class CalibrationHistoryStore {
         return fromDisk;
     }
 
+    public List<CalibrationHistoryEntry> history(String scenarioKey) {
+        if (scenarioKey == null || scenarioKey.isBlank()) {
+            return List.of();
+        }
+        return readAllFromDisk(scenarioKey);
+    }
+
     private boolean shouldInvalidateCache() {
         try {
             if (Files.notExists(historyPath)) {
@@ -159,6 +168,28 @@ public class CalibrationHistoryStore {
             return null;
         }
         return latest;
+    }
+
+    private List<CalibrationHistoryEntry> readAllFromDisk(String scenarioKey) {
+        if (!Files.exists(historyPath)) {
+            return List.of();
+        }
+        List<CalibrationHistoryEntry> entries = new ArrayList<>();
+        try (BufferedReader reader = Files.newBufferedReader(historyPath)) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.isBlank()) {
+                    continue;
+                }
+                CalibrationHistoryEntry entry = objectMapper.readValue(line, CalibrationHistoryEntry.class);
+                if (scenarioKey.equals(entry.scenarioKey())) {
+                    entries.add(entry);
+                }
+            }
+        } catch (IOException ignored) {
+            return List.of();
+        }
+        return entries;
     }
 
     private double round3(double value) {

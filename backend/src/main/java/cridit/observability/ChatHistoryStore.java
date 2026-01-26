@@ -31,6 +31,9 @@ public class ChatHistoryStore {
         if (message == null) {
             return;
         }
+        if ("operator_prompt".equals(message.source) || "interaction_feedback".equals(message.source)){
+            return;
+        }
         ChatHistoryEntry entry = new ChatHistoryEntry(
                 scenarioKey,
                 message.taskId,

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clearSession, loadSession, type SessionData } from "../lib/session";
 
-const DEFAULT_BACKEND_URL = "http://cridit:8001";
+const DEFAULT_BACKEND_URL = "http://cridit-mock-up:8001";
 
 const sendJSON = async (baseUrl: string, path: string, payload: unknown) => {
   const url = baseUrl ? `${baseUrl}${path}` : path;

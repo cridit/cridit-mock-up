@@ -380,6 +380,21 @@ body {
   color: var(--muted);
 }
 
+.trust-warning {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(192, 119, 94, 0.35);
+  background: rgba(192, 119, 94, 0.12);
+  color: var(--ink);
+  font-size: 0.9rem;
+  display: none;
+}
+
+.trust-warning.active {
+  display: block;
+}
+
 .interaction-controls {
   margin-top: 18px;
   padding: 14px;
@@ -758,6 +773,7 @@ body {
 .trust-event-row {
   grid-template-columns: minmax(70px, 0.8fr) 90px minmax(180px, 1fr) minmax(140px, 1fr);
   column-gap: 12px;
+  align-items: center;
 }
 
 .trust-event-header {

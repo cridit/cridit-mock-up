@@ -10,8 +10,8 @@ type ScenarioInput = {
 };
 
 export default function Home() {
-  const [participantBaseUrl, setParticipantBaseUrl] = useState("http://cridit-participant:3000");
-  const [backendBaseUrl, setBackendBaseUrl] = useState("http://cridit:8001");
+  const [participantBaseUrl, setParticipantBaseUrl] = useState("http://cridit-mock-up:3000");
+  const [backendBaseUrl, setBackendBaseUrl] = useState("http://cridit-mock-up:8001");
   const [inputs, setInputs] = useState<Record<string, ScenarioInput>>(() =>
     Object.fromEntries(
       scenarios.map((scenario) => [
