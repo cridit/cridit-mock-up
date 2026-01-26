@@ -8,7 +8,14 @@ public class ChatMessage {
   public String clientId;
   public String taskId;
   public Integer rating;
+  public Integer adopted;
+  public Integer rejected;
   public String selfConfidence;
+  public Integer selfConfidenceScore;
+  public Integer reliability;
+  public Integer predictability;
+  public Integer taskCriticality;
+  public Integer taskComplexity;
   public String satisfaction;
   public String helpfulness;
   public String trustCueUsefulness;

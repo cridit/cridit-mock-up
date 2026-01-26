@@ -2,19 +2,17 @@ package cridit.api;
 
 import cridit.api.dto.request.machine.EvidenceRequest;
 import cridit.api.dto.request.human.HumanInputRequest;
-import cridit.api.dto.request.human.PreflightHumanInputRequest;
 import cridit.api.dto.request.human.PreflightRequest;
 import cridit.api.dto.request.workflow.TrustCuesRequest;
 import cridit.api.dto.request.workflow.CalibrationRecordRequest;
 import cridit.api.dto.request.workflow.PostflightRequest;
 import cridit.api.dto.request.machine.TrustEventRequest;
 import cridit.api.dto.response.machine.MachineTrustEventResponse;
-import cridit.api.dto.response.workflow.PostflightSummary;
 import cridit.calibration.Calibration;
 import cridit.calibration.TrustCues;
-import cridit.calibration.adaptation.PostflightService;
 import cridit.machineSide.Evidence;
 import cridit.humanSide.Adoption;
+import cridit.humanSide.Feedback;
 import cridit.humanSide.Feedback.Report;
 import cridit.humanSide.HumanSideTrustEvaluation;
 import cridit.machineSide.MachineSideTrustEvaluation;
@@ -51,9 +49,6 @@ public class CRiDiTController {
     CalibrationHistoryStore calibrationHistoryStore;
 
     @Inject
-    PostflightService postflightService;
-
-    @Inject
     PreflightAnswerStore preflightAnswerStore;
 
     @Inject
@@ -66,7 +61,6 @@ public class CRiDiTController {
                             HumanSideTrustEvaluation humanSideTrustEvaluation,
                             Calibration calibration,
                             CRiDiTObservability observability,
-                            PostflightService postflightService,
                             PreflightAnswerStore preflightAnswerStore,
                             PostflightAnswerStore postflightAnswerStore,
                             MachineTrustEventService machineTrustEventService) {
@@ -74,7 +68,6 @@ public class CRiDiTController {
         this.humanSideTrustEvaluation = humanSideTrustEvaluation;
         this.calibration = calibration;
         this.observability = observability;
-        this.postflightService = postflightService;
         this.preflightAnswerStore = preflightAnswerStore;
         this.postflightAnswerStore = postflightAnswerStore;
         this.machineTrustEventService = machineTrustEventService;
@@ -109,8 +102,9 @@ public class CRiDiTController {
 
     @POST
     @Path("/evaluation/score/human/preflight")
-    public double getHumanTrustScoreWithPreflight(PreflightHumanInputRequest request) {
-        PreflightScore.Response preflightResponse = request.preflight().toResponse();
+    public double getHumanTrustScoreWithPreflight(PreflightRequest request) {
+        preflightAnswerStore.record(request);
+        PreflightScore.Response preflightResponse = request.toResponse();
         return humanSideTrustEvaluation.getHumanTrustScoreWithPreflight(preflightResponse);
     }
 
@@ -169,15 +163,8 @@ public class CRiDiTController {
 
     @POST
     @Path("/postflight")
-    public PostflightSummary submitPostflight(PostflightRequest request) {
+    public void submitPostflight(PostflightRequest request) {
         postflightAnswerStore.record(request);
-        return postflightService.submit(request);
-    }
-
-    @GET
-    @Path("/postflight")
-    public List<PostflightSummary> listPostflightSummaries() {
-        return postflightService.listSummaries();
     }
 
     @GET
@@ -189,6 +176,20 @@ public class CRiDiTController {
         }
         CalibrationHistoryEntry fallback = calibrationHistoryStore.latest("default");
         if (fallback != null) {
+            return fallback;
+        }
+        throw new NotFoundException("No calibration history for scenario");
+    }
+
+    @GET
+    @Path("/calibration/history/{scenario}")
+    public List<CalibrationHistoryEntry> getCalibrationHistory(@PathParam("scenario") String scenario) {
+        List<CalibrationHistoryEntry> entries = calibrationHistoryStore.history(scenario);
+        if (!entries.isEmpty()) {
+            return entries;
+        }
+        List<CalibrationHistoryEntry> fallback = calibrationHistoryStore.history("default");
+        if (!fallback.isEmpty()) {
             return fallback;
         }
         throw new NotFoundException("No calibration history for scenario");
@@ -243,17 +244,33 @@ public class CRiDiTController {
                 humanInputRecord.rejected(),
                 humanInputRecord.adoptionBaseRate()
         );
-        Report feedbackReport = new Report(
-                humanInputRecord.feedbackLikelihood(),
-                humanInputRecord.feedbackConfidence(),
-                humanInputRecord.feedbackBaseRate()
-        );
+        Report feedbackReport = resolveFeedbackReport(humanInputRecord);
 
         return humanSideTrustEvaluation.getHumanTrustScore(
                 humanInputRecord.behaviorInputWeight(),
                 adoption,
                 humanInputRecord.feedbackInputWeight(),
                 feedbackReport
+        );
+    }
+
+    private Report resolveFeedbackReport(HumanInputRequest humanInputRecord) {
+        Integer reliability = humanInputRecord.feedbackReliability();
+        Integer predictability = humanInputRecord.feedbackPredictability();
+        Integer selfConfidence = humanInputRecord.feedbackSelfConfidence();
+        Integer taskCriticality = humanInputRecord.taskCriticality();
+        if (reliability != null && predictability != null && selfConfidence != null && taskCriticality != null) {
+            return Feedback.fromParticipantScalars(
+                    reliability,
+                    predictability,
+                    selfConfidence,
+                    taskCriticality
+            );
+        }
+        return new Report(
+                humanInputRecord.feedbackLikelihood(),
+                humanInputRecord.feedbackConfidence(),
+                humanInputRecord.feedbackBaseRate()
         );
     }
 }

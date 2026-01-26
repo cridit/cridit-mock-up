@@ -13,11 +13,9 @@ public class MachineTrustManager {
     private final EventToEvidenceMapper mapper = new EventToEvidenceMapper();
     private final List<Evidence> evidenceHistory = new ArrayList<>();
     private final Map<EventType, Double> factorScores = new EnumMap<>(EventType.class);
-    private final String modelId;
-
-    public MachineTrustManager(String modelId, double baselineScore) {
-        this.modelId = modelId;
-        Evidence baselineEvidence = mapper.mapBaselineScore(baselineScore, modelId);
+    
+    public MachineTrustManager(String llmModelId, double baselineScore) {
+        Evidence baselineEvidence = mapper.mapBaselineScore(baselineScore, llmModelId);
         evidenceHistory.add(baselineEvidence);
         updateFactorScores();
     }

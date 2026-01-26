@@ -89,7 +89,14 @@ public class CommunicationInterfaceController {
         timestamp
     );
     stored.rating = message.rating;
+    stored.adopted = message.adopted;
+    stored.rejected = message.rejected;
     stored.selfConfidence = message.selfConfidence;
+    stored.selfConfidenceScore = message.selfConfidenceScore;
+    stored.reliability = message.reliability;
+    stored.predictability = message.predictability;
+    stored.taskCriticality = message.taskCriticality;
+    stored.taskComplexity = message.taskComplexity;
     stored.satisfaction = message.satisfaction;
     stored.helpfulness = message.helpfulness;
     stored.trustCueUsefulness = message.trustCueUsefulness;

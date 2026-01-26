@@ -3,6 +3,7 @@ package cridit.api.dto.request.human;
 import com.fasterxml.jackson.annotation.JsonAlias;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
@@ -46,4 +47,24 @@ public record HumanInputRequest(
         @DecimalMax(value = "1.0", inclusive = true)
         @JsonAlias({"feedbackBaseRate"})
         double feedbackBaseRate,
+
+        @Min(1)
+        @Max(7)
+        @JsonAlias({"reliability"})
+        Integer feedbackReliability,
+
+        @Min(1)
+        @Max(7)
+        @JsonAlias({"predictability"})
+        Integer feedbackPredictability,
+
+        @Min(1)
+        @Max(7)
+        @JsonAlias({"selfConfidence"})
+        Integer feedbackSelfConfidence,
+
+        @Min(1)
+        @Max(7)
+        @JsonAlias({"taskCriticality"})
+        Integer taskCriticality
 ){}

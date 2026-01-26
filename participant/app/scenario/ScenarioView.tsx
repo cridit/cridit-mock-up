@@ -78,10 +78,11 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
       root.classList.add("pre-interaction");
     }
 
-    const chatBaseUrl = backendUrl || "http://cridit:8001";
+    const chatBaseUrl = backendUrl || "http://cridit-mock-up:8001";
     let chatPoll: number | null = null;
     let trustPoll: number | null = null;
     let lastChatId = 0;
+    let lastParticipantRequest = "";
     const clientId =
       typeof crypto !== "undefined" && "randomUUID" in crypto
         ? crypto.randomUUID()
@@ -345,15 +346,14 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
       threshold?: number;
       decision?: string;
     }) => {
-      if (payload.timestamp) {
-        return payload.timestamp;
-      }
+      const toKey = (value?: number) =>
+        typeof value === "number" && Number.isFinite(value) ? value.toFixed(3) : "n/a";
       return [
-        payload.humanTrustScore,
-        payload.machineTrustScore,
-        payload.humanMachineTrustGap,
-        payload.threshold,
-        payload.decision,
+        toKey(payload.humanTrustScore),
+        toKey(payload.machineTrustScore),
+        toKey(payload.humanMachineTrustGap),
+        toKey(payload.threshold),
+        payload.decision ?? "NO ACTION",
       ].join("|");
     };
 
@@ -393,11 +393,7 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
             typeof trustCues.threshold === "number"
               ? trustCues.threshold
               : scenarioRef.current.threshold;
-          const existingMachineText = document.getElementById("machine-trust")?.textContent || "n/a";
-          const existingMachineValue = Number(existingMachineText);
-          const machineToUse = Number.isFinite(existingMachineValue)
-            ? existingMachineValue
-            : machineValue;
+          const machineToUse = machineValue;
           const human = Number.isFinite(humanValue) ? humanValue.toFixed(3) : "n/a";
           const machine = Number.isFinite(machineToUse) ? machineToUse.toFixed(3) : "n/a";
           const gapValue =
@@ -416,9 +412,7 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
           const taskLabel = resolveTaskLabel(trustCues.taskId);
 
           setText("human-trust", human);
-          if (!Number.isFinite(existingMachineValue)) {
-            setText("machine-trust", machine);
-          }
+          setText("machine-trust", machine);
           setText("gap-value", gap);
           setText("gap-inline", gap);
           setText("threshold-value", threshold);
@@ -427,6 +421,7 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
           setText("status-text", state);
           updateTrustEvolution(human, machine);
           updateGapEvolution(gap);
+          updateGapWarning(gapValue, thresholdValue, decision, taskLabel);
           const timeLabel = trustCues.timestamp ?? new Date().toISOString();
           setText(statusId, `Last update: ${timeLabel} · Task: ${taskLabel}`);
           setText("trust-task-label", taskLabel);
@@ -488,6 +483,31 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
       return "NO ACTION";
     };
 
+    const updateGapWarning = (
+      gapValue: number,
+      thresholdValue: number,
+      decision: string,
+      taskLabel: string,
+    ) => {
+      const warning = document.getElementById("trust-gap-warning");
+      if (!warning) return;
+      if (Number.isFinite(gapValue) && Number.isFinite(thresholdValue) && Math.abs(gapValue) > thresholdValue) {
+        if (decision === "INCREASE HUMAN TRUST") {
+          warning.textContent =
+            `${taskLabel}: The system performs well on this task. You can rely on it to improve efficiency.`;
+        } else if (decision === "DECREASE HUMAN TRUST") {
+          warning.textContent =
+            `${taskLabel}: Please verify the output carefully. The system can make mistakes.`;
+        } else {
+          warning.textContent = `${taskLabel}: Trust gap exceeds the threshold.`;
+        }
+        warning.classList.add("active");
+      } else {
+        warning.textContent = "";
+        warning.classList.remove("active");
+      }
+    };
+
     const resolvePreviousState = () => {
       const state = document.getElementById("calibration-state")?.textContent || "";
       if (state.includes("over")) {
@@ -499,15 +519,26 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
       return null;
     };
 
+    const readLikert = (id: string) => {
+      const raw = (document.getElementById(id) as HTMLSelectElement | null)?.value;
+      const parsed = raw ? Number(raw) : null;
+      return Number.isFinite(parsed) ? parsed : null;
+    };
+
     const sendTrustCues = async (message: string) => {
-      const ratingRaw = (document.getElementById("feedback-rating") as HTMLSelectElement | null)?.value;
-      const rating = ratingRaw ? Number(ratingRaw) : null;
-      const selfConfidence =
-        (document.getElementById("self-confidence") as HTMLSelectElement | null)?.value || "neutral";
+      const reliability = readLikert("feedback-reliability");
+      const predictability = readLikert("feedback-predictability");
+      const selfConfidence = readLikert("feedback-self-confidence");
+      const taskCriticality = readLikert("task-criticality");
+      const taskComplexity = readLikert("task-complexity");
       const interactionId = `interaction-${Date.now()}`;
-      const feedbackLikelihood =
-        typeof rating === "number" ? clamp((rating - 1) / 4, 0, 1) : 0;
-      const feedbackWeight = typeof rating === "number" ? 0.25 : 0;
+      const hasFeedbackScalars =
+        reliability !== null &&
+        predictability !== null &&
+        selfConfidence !== null &&
+        taskCriticality !== null;
+      const feedbackLikelihood = 0.5;
+      const feedbackWeight = hasFeedbackScalars ? 0.25 : 0;
       const behaviorWeight = 0.55;
       const weightSum = behaviorWeight + feedbackWeight;
       const behaviorInputWeight = weightSum > 0 ? behaviorWeight / weightSum : 1;
@@ -559,11 +590,15 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
           feedbackLikelihood,
           feedbackConfidence: feedbackInputWeight > 0 ? 0.7 : 0,
           feedbackBaseRate: 0.4,
+          reliability,
+          predictability,
+          selfConfidence,
+          taskCriticality,
         },
         feedbackInput: {
-          rating,
+          rating: null,
           feedbackText: message || "",
-          selfConfidence,
+          selfConfidence: selfConfidence?.toString() ?? null,
           satisfaction: null,
           helpfulness: null,
           trustCueUsefulness: null,
@@ -577,7 +612,7 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
         previousMiscalibrationState: resolvePreviousState(),
         taskId: activeTaskIdRef.current ?? scenarioKey,
         domain: scenarioKey,
-        difficulty: null,
+        difficulty: taskComplexity?.toString() ?? null,
         conflictRedistribution: "pcr5",
         thresholdNature: "dynamic",
         initialThreshold: scenarioRef.current.threshold,
@@ -596,7 +631,7 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
 
       try {
         const response = await fetch(
-          `${backendUrl || "http://cridit:8001"}/cridit/calibration/trustCues`,
+          `${backendUrl || "http://cridit-mock-up:8001"}/cridit/calibration/trustCues`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -649,6 +684,7 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
         setText("status-text", state);
         updateTrustEvolution(human, machine);
         updateGapEvolution(gap);
+        updateGapWarning(gapValue, thresholdValue, decision, resolveTaskLabel(trustCues.taskId));
         toggleCueCards();
         appendLog(`Calibration updated: ${decision}, gap=${gap}.`);
       } catch (error) {
@@ -656,30 +692,9 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
           `Calibration error: ${error instanceof Error ? error.message : String(error)}`,
         );
       }
-      if (rating !== null || message) {
-        postChatMessage("system", message || "", "interaction_feedback", {
-          rating,
-          selfConfidence,
-          satisfaction: null,
-          helpfulness: null,
-          trustCueUsefulness: null,
-          interactionId,
-        });
-      }
     };
 
-    const wireRecallPrompt = () => {
-      const recall = document.getElementById("recall-prompt");
-      const prompt = document.getElementById("last-prompt-text");
-      const input = document.getElementById("user-message") as HTMLInputElement | null;
-      if (!recall || !prompt || !input) return;
-      recall.addEventListener("click", () => {
-        if (!prompt.textContent) return;
-        input.value = prompt.textContent;
-        input.focus();
-        appendLog("Prompt recalled into chat input.");
-      });
-    };
+    const wireRecallPrompt = () => {};
 
     const wireCueRating = () => {
       const rating = document.getElementById("trust-cues-rating") as HTMLSelectElement | null;
@@ -724,6 +739,77 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#39;");
 
+    const renderInline = (value: string) => {
+      const escaped = escapeHtml(value);
+      return escaped
+        .replace(/`([^`]+)`/g, "<code>$1</code>")
+        .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+        .replace(/\*([^*]+)\*/g, "<em>$1</em>");
+    };
+
+    const renderMarkdown = (segment: string) => {
+      const lines = segment.split("\n");
+      const parts: string[] = [];
+      let inUl = false;
+      let inOl = false;
+      const closeLists = () => {
+        if (inUl) {
+          parts.push("</ul>");
+          inUl = false;
+        }
+        if (inOl) {
+          parts.push("</ol>");
+          inOl = false;
+        }
+      };
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) {
+          closeLists();
+          parts.push("<br>");
+          continue;
+        }
+
+        const headingMatch = trimmed.match(/^(#{1,4})\s+(.*)$/);
+        if (headingMatch) {
+          closeLists();
+          const level = headingMatch[1].length;
+          const tag = level === 1 ? "h4" : level === 2 ? "h5" : "h6";
+          parts.push(`<${tag}>${renderInline(headingMatch[2])}</${tag}>`);
+          continue;
+        }
+
+        const olMatch = line.match(/^\s*\d+[.)]\s+(.*)$/);
+        if (olMatch) {
+          if (!inOl) {
+            closeLists();
+            parts.push("<ol>");
+            inOl = true;
+          }
+          parts.push(`<li>${renderInline(olMatch[1])}</li>`);
+          continue;
+        }
+
+        const ulMatch = line.match(/^\s*[-*]\s+(.*)$/);
+        if (ulMatch) {
+          if (!inUl) {
+            closeLists();
+            parts.push("<ul>");
+            inUl = true;
+          }
+          parts.push(`<li>${renderInline(ulMatch[1])}</li>`);
+          continue;
+        }
+
+        closeLists();
+        parts.push(`<p>${renderInline(trimmed)}</p>`);
+      }
+
+      closeLists();
+      return parts.join("");
+    };
+
     const formatChatText = (value: string) => {
       const normalized = value.replace(/\r\n/g, "\n");
       const trimmed = normalized.trim();
@@ -733,7 +819,7 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
           const pretty = JSON.stringify(JSON.parse(trimmed), null, 2);
           return `<pre><code>${escapeHtml(pretty)}</code></pre>`;
         } catch {
-          // fall through to plain rendering
+          // fall through to markdown rendering
         }
       }
       const parts: string[] = [];
@@ -745,14 +831,14 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
         const start = match.index;
         if (start > lastIndex) {
           const segment = normalized.slice(lastIndex, start);
-          parts.push(escapeHtml(segment).replace(/\n/g, "<br>"));
+          parts.push(renderMarkdown(segment));
         }
         parts.push(`<pre><code>${escapeHtml(code)}</code></pre>`);
         lastIndex = start + fullMatch.length;
       }
       if (lastIndex < normalized.length) {
         const tail = normalized.slice(lastIndex);
-        parts.push(escapeHtml(tail).replace(/\n/g, "<br>"));
+        parts.push(renderMarkdown(tail));
       }
       return parts.join("");
     };
@@ -772,11 +858,23 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
       (container as HTMLElement).scrollTop = (container as HTMLElement).scrollHeight;
     };
 
+    const summarize = (value: string, maxLength: number) => {
+      if (value.length <= maxLength) {
+        return value;
+      }
+      return `${value.slice(0, Math.max(0, maxLength - 3))}...`;
+    };
+
     const appendPromptHistory = (text: string, taskId?: string | null) => {
-      const label = resolveTaskLabel(taskId);
-      appendListItem("prompt-history", `${label}: ${text}`);
-      setText("last-prompt-text", text);
-      setText("prompt-task-label", label);
+      const taskLabel = taskId && taskId.trim() ? taskId.trim() : "task-unknown";
+      const participantText = summarize(lastParticipantRequest || "n/a", 140);
+      const promptText = summarize(text, 140);
+      appendListItem(
+        "prompt-history",
+        `${taskLabel} | Participant: ${participantText} | Prompt: ${promptText}`,
+      );
+      setText("last-prompt-text", `Participant: ${participantText} | Prompt: ${promptText}`);
+      setText("prompt-task-label", taskLabel);
       toggleCueCards();
     };
 
@@ -837,7 +935,14 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
       source: string,
       meta?: {
         rating?: number | null;
+        adopted?: number | null;
+        rejected?: number | null;
         selfConfidence?: string | null;
+        selfConfidenceScore?: number | null;
+        reliability?: number | null;
+        predictability?: number | null;
+        taskCriticality?: number | null;
+        taskComplexity?: number | null;
         satisfaction?: string | null;
         helpfulness?: string | null;
         trustCueUsefulness?: string | null;
@@ -855,7 +960,14 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
             clientId,
             taskId: activeTaskId,
             rating: meta?.rating ?? null,
+            adopted: meta?.adopted ?? null,
+            rejected: meta?.rejected ?? null,
             selfConfidence: meta?.selfConfidence ?? null,
+            selfConfidenceScore: meta?.selfConfidenceScore ?? null,
+            reliability: meta?.reliability ?? null,
+            predictability: meta?.predictability ?? null,
+            taskCriticality: meta?.taskCriticality ?? null,
+            taskComplexity: meta?.taskComplexity ?? null,
             satisfaction: meta?.satisfaction ?? null,
             helpfulness: meta?.helpfulness ?? null,
             trustCueUsefulness: meta?.trustCueUsefulness ?? null,
@@ -876,13 +988,14 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
 
     const wireChat = () => {
       const container = document.querySelector(".chat");
-      const input = document.getElementById("user-message") as HTMLInputElement | null;
+      const input = document.getElementById("user-message") as HTMLTextAreaElement | null;
       const send = document.getElementById("send-message");
-      if (!container || !input || !send) return;
+      if (!container || !input || !send) return null;
       const sendMessage = () => {
         const value = input.value.trim();
         if (!value) return;
         appendChatBubble(container, "user", value);
+        lastParticipantRequest = value;
         input.value = "";
         if (!isOperator) {
           root.classList.remove("pre-interaction");
@@ -892,17 +1005,77 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
         postChatMessage("user", value, "participant");
       };
 
-      send.addEventListener("click", sendMessage);
-      input.addEventListener("keydown", (event) => {
-        if (event.key === "Enter") {
+      const onKeyDown = (event: KeyboardEvent) => {
+        if (event.key === "Enter" && !event.shiftKey) {
+          event.preventDefault();
           sendMessage();
         }
-      });
+      };
+
+      send.addEventListener("click", sendMessage);
+      input.addEventListener("keydown", onKeyDown);
+      return () => {
+        send.removeEventListener("click", sendMessage);
+        input.removeEventListener("keydown", onKeyDown);
+      };
     };
 
     const wireChatBridge = () => {
       const container = document.querySelector(".chat");
       if (!container) return null;
+      const processMessage = (message: {
+        id: number;
+        role: string;
+        text: string;
+        source: string;
+        clientId?: string;
+        timestamp: number;
+        taskId?: string;
+      }) => {
+        if (message.id > lastChatId) {
+          lastChatId = message.id;
+        }
+        if (message.clientId && message.clientId === clientId) {
+          return;
+        }
+        if (message.source === "interaction_feedback") {
+          return;
+        }
+        if (message.role === "user") {
+          appendChatBubble(container, "user", message.text);
+          if (message.source === "participant") {
+            lastParticipantRequest = message.text;
+          }
+        } else if (message.source === "operator_prompt" && message.role === "system" && !isOperator) {
+          appendPromptHistory(message.text, message.taskId);
+        } else if (message.source === "operator" && message.role === "system" && !isOperator) {
+          replaceThinkingBubble(container, message.text);
+          appendLog("Operator response delivered to participant.");
+        } else if (message.role === "system") {
+          appendChatBubble(container, "system", message.text);
+        }
+      };
+      const loadChatHistory = async () => {
+        try {
+          const response = await fetch(`${chatBaseUrl}/chat/${scenario.key}`, { cache: "no-store" });
+          if (!response.ok) return;
+          const messages = (await response.json()) as Array<{
+            id: number;
+            role: string;
+            text: string;
+            source: string;
+            clientId?: string;
+            timestamp: number;
+            taskId?: string;
+          }>;
+          messages
+            .slice()
+            .sort((a, b) => a.id - b.id)
+            .forEach(processMessage);
+        } catch {
+          // ignore history load errors
+        }
+      };
       const poll = async () => {
         try {
           const response = await fetch(
@@ -921,34 +1094,92 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
           messages
             .slice()
             .sort((a, b) => a.id - b.id)
-            .forEach((message) => {
-              if (message.id > lastChatId) {
-                lastChatId = message.id;
-              }
-              if (message.clientId && message.clientId === clientId) {
-                return;
-              }
-              if (message.source === "interaction_feedback") {
-                return;
-              }
-              if (message.role === "user") {
-                appendChatBubble(container, "user", message.text);
-              } else if (message.source === "operator_prompt" && message.role === "system" && !isOperator) {
-                appendPromptHistory(message.text, message.taskId);
-              } else if (message.source === "operator" && message.role === "system" && !isOperator) {
-                replaceThinkingBubble(container, message.text);
-                appendLog("Operator response delivered to participant.");
-              } else if (message.role === "system") {
-                appendChatBubble(container, "system", message.text);
-              }
-            });
+            .forEach(processMessage);
         } catch {
           // ignore polling errors
         }
       };
 
-      poll();
+      loadChatHistory().then(poll);
       return window.setInterval(poll, 1500);
+    };
+
+    const loadCalibrationHistory = async () => {
+      try {
+        const response = await fetch(
+          `${chatBaseUrl}/cridit/calibration/history/${scenario.key}`,
+          { cache: "no-store" },
+        );
+        if (!response.ok) {
+          return;
+        }
+        const entries = (await response.json()) as Array<{
+          humanTrustScore?: number;
+          machineTrustScore?: number;
+          humanMachineTrustGap?: number;
+          threshold?: number;
+          decision?: string;
+          timestamp?: string;
+        }>;
+        if (!Array.isArray(entries) || entries.length === 0) {
+          return;
+        }
+        entries.forEach((entry) => {
+          if (typeof entry.humanTrustScore === "number" && typeof entry.machineTrustScore === "number") {
+            trustHistory.push({ human: entry.humanTrustScore, machine: entry.machineTrustScore });
+          }
+          if (typeof entry.humanMachineTrustGap === "number") {
+            gapHistory.push(entry.humanMachineTrustGap);
+          }
+        });
+        if (trustHistory.length > maxHistory) {
+          trustHistory.splice(0, trustHistory.length - maxHistory);
+        }
+        if (gapHistory.length > maxHistory) {
+          gapHistory.splice(0, gapHistory.length - maxHistory);
+        }
+        drawTrustChart();
+        drawGapChart();
+        const lastEntry = entries[entries.length - 1];
+        lastCalibrationKey = buildCalibrationKey(lastEntry);
+      } catch {
+        // ignore history load errors
+      }
+    };
+
+    const wireFeedbackSubmit = () => {
+      const submit = document.getElementById("submit-feedback");
+      if (!submit) return null;
+      const onClick = () => {
+        const reliability = readLikert("feedback-reliability");
+        const predictability = readLikert("feedback-predictability");
+        const selfConfidence = readLikert("feedback-self-confidence");
+        const taskCriticality = readLikert("task-criticality");
+        const taskComplexity = readLikert("task-complexity");
+        if (
+          reliability === null ||
+          predictability === null ||
+          selfConfidence === null ||
+          taskCriticality === null
+        ) {
+          appendLog("Please complete reliability, predictability, self-confidence, and criticality.");
+          return;
+        }
+        postChatMessage("system", "", "interaction_feedback", {
+          adopted: interactionState.adopted,
+          rejected: interactionState.rejected,
+          selfConfidenceScore: selfConfidence,
+          reliability,
+          predictability,
+          taskCriticality,
+          taskComplexity,
+        });
+        appendLog("Feedback submitted to operator.");
+      };
+      submit.addEventListener("click", onClick);
+      return () => {
+        submit.removeEventListener("click", onClick);
+      };
     };
 
     const endSessionButton = document.getElementById("end-session");
@@ -959,11 +1190,13 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
       endSessionButton.addEventListener("click", handleEndSession);
     }
 
-    wireChat();
+    const cleanupChat = wireChat();
     wireValidationControls();
     wireActionConsole();
     chatPoll = wireChatBridge();
     trustPoll = wireTrustSync();
+    loadCalibrationHistory();
+    const cleanupFeedbackSubmit = wireFeedbackSubmit();
     wireRecallPrompt();
     wireCueRating();
     wireOperatorReply();
@@ -978,6 +1211,12 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
       }
       if (endSessionButton) {
         endSessionButton.removeEventListener("click", handleEndSession);
+      }
+      if (cleanupChat) {
+        cleanupChat();
+      }
+      if (cleanupFeedbackSubmit) {
+        cleanupFeedbackSubmit();
       }
     };
   }, [backendUrl, isOperator, scenario.key]);
@@ -1182,7 +1421,11 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
           </div>
           <div className="chat"></div>
           <div className="input-row active participant-only">
-            <input id="user-message" type="text" placeholder="Type a short response..." />
+            <textarea
+              id="user-message"
+              placeholder="Type your response... (Shift+Enter for a new line)"
+              rows={3}
+            />
             <button id="send-message" type="button">
               Send
             </button>
@@ -1209,28 +1452,75 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
             </div>
             <div className="feedback-controls">
               <label>
-                Self-confidence (self-report)
-                <select id="self-confidence">
-                  <option value="neutral">Neutral</option>
-                  <option value="confident">Confident</option>
-                  <option value="uncertain">Uncertain</option>
-                  <option value="frustrated">Frustrated</option>
-                  <option value="satisfied">Satisfied</option>
-                </select>
-              </label>
-              <label>
-                Reliance rating (1-5)
-                <select id="feedback-rating">
+                Self-confidence (1-7)
+                <select id="feedback-self-confidence">
                   <option value="">Select</option>
                   <option value="1">1</option>
                   <option value="2">2</option>
                   <option value="3">3</option>
                   <option value="4">4</option>
                   <option value="5">5</option>
+                  <option value="6">6</option>
+                  <option value="7">7</option>
+                </select>
+              </label>
+              <label>
+                Reliability (1-7)
+                <select id="feedback-reliability">
+                  <option value="">Select</option>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                  <option value="6">6</option>
+                  <option value="7">7</option>
+                </select>
+              </label>
+              <label>
+                Predictability (1-7)
+                <select id="feedback-predictability">
+                  <option value="">Select</option>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                  <option value="6">6</option>
+                  <option value="7">7</option>
+                </select>
+              </label>
+              <label>
+                Task criticality (1-7)
+                <select id="task-criticality">
+                  <option value="">Select</option>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                  <option value="6">6</option>
+                  <option value="7">7</option>
+                </select>
+              </label>
+              <label>
+                Task complexity (1-7)
+                <select id="task-complexity">
+                  <option value="">Select</option>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                  <option value="6">6</option>
+                  <option value="7">7</option>
                 </select>
               </label>
             </div>
             <div className="form-actions">
+              <button id="submit-feedback" className="ghost" type="button">
+                Submit feedback
+              </button>
               <button id="end-session" className="primary" type="button">
                 End session
               </button>
@@ -1244,36 +1534,14 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
             <span className="status">Auto-captured for analysis</span>
           </div>
           <div className="protocol-block">
-            <h3>Trust Cues History</h3>
-            <div className="cue-grid">
-              <div className="cue-card" id="trust-cues-card">
-                <ul className="compact-list" id="trust-cues-list"></ul>
-                <label className="cue-rating">
-                  Cue rating (1-5)
-                  <select id="trust-cues-rating">
-                    <option value="">Select</option>
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                    <option value="3">3</option>
-                    <option value="4">4</option>
-                    <option value="5">5</option>
-                  </select>
-                </label>
-              </div>
-            </div>
+            <h3>Trust Cue Warning</h3>
+            <p id="trust-gap-warning" className="trust-warning" role="alert"></p>
           </div>
           <div className="protocol-block">
             <h3>Prompt History</h3>
             <div className="cue-grid">
               <div className="cue-card" id="prompt-history-card">
                 <ul className="compact-list" id="prompt-history"></ul>
-                <p className="muted">
-                  Bound to task: <span id="prompt-task-label">{resolveTaskLabel(activeTaskId)}</span>
-                </p>
-                <p className="muted" id="last-prompt-text"></p>
-                <button id="recall-prompt" className="ghost" type="button">
-                  Recall prompt to chat
-                </button>
               </div>
             </div>
           </div>
