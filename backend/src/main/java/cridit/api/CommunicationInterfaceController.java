@@ -54,11 +54,17 @@ public class CommunicationInterfaceController {
   public List<ChatMessage> listChat(
       @PathParam("scenario") String scenario,
       @QueryParam("since") long since,
-      @QueryParam("afterId") long afterId
+      @QueryParam("afterId") long afterId,
+      @QueryParam("sessionId") String sessionId
   ) {
     List<ChatMessage> messages = CHAT_STORE.getOrDefault(scenario, List.of());
     List<ChatMessage> filtered = new ArrayList<>();
     for (ChatMessage message : messages) {
+      if (sessionId != null && !sessionId.isBlank()) {
+        if (message.sessionId == null || !sessionId.equals(message.sessionId)) {
+          continue;
+        }
+      }
       if (afterId > 0) {
         if (message.id > afterId) {
           filtered.add(message);
@@ -88,6 +94,7 @@ public class CommunicationInterfaceController {
         message.taskId,
         timestamp
     );
+    stored.sessionId = message.sessionId;
     stored.rating = message.rating;
     stored.adopted = message.adopted;
     stored.rejected = message.rejected;

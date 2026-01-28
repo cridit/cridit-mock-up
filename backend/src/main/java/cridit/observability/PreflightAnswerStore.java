@@ -20,7 +20,7 @@ public class PreflightAnswerStore {
     public PreflightAnswerStore(
             ObjectMapper objectMapper,
             @ConfigProperty(name = "cridit.preflight.answers.path",
-                    defaultValue = "target/cridit-preflight-answers.jsonl")
+                    defaultValue = "src/main/resources/cridit-preflight-answers.jsonl")
             String answersPath
     ) {
         this.objectMapper = objectMapper;

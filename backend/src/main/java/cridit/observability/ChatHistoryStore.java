@@ -36,18 +36,13 @@ public class ChatHistoryStore {
         }
         ChatHistoryEntry entry = new ChatHistoryEntry(
                 scenarioKey,
+                message.sessionId,
                 message.taskId,
                 message.id,
                 message.role,
                 message.text,
                 message.source,
                 message.clientId,
-                message.rating,
-                message.selfConfidence,
-                message.satisfaction,
-                message.helpfulness,
-                message.trustCueUsefulness,
-                message.interactionId,
                 message.timestamp
         );
         append(entry);

@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ScenarioData } from "./data";
-import { loadSession, type BenchmarkEvidence } from "../lib/session";
+import { generateClientId, loadSession, saveSession, type BenchmarkEvidence } from "../lib/session";
 import openAiLogo from "./open-ai-logo.png";
 
 type ScenarioViewProps = {
@@ -83,19 +83,61 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
     let trustPoll: number | null = null;
     let lastChatId = 0;
     let lastParticipantRequest = "";
-    const clientId =
-      typeof crypto !== "undefined" && "randomUUID" in crypto
-        ? crypto.randomUUID()
-        : `client-${Math.random().toString(36).slice(2, 10)}`;
+    const session = loadSession();
+    const resolvedClientId = session?.clientId ?? generateClientId();
+    if (session && !session.clientId) {
+      saveSession({ clientId: resolvedClientId });
+    }
+    const clientId = resolvedClientId;
 
     const interactionState = {
       adopted: 0,
       rejected: 0,
       roundIndex: 0,
     };
+    let behaviorChoiceLocked = false;
+    let feedbackSubmitLocked = false;
+    let toastTimeout: number | null = null;
     let lastCalibrationKey = "";
-    const session = loadSession();
     const benchmarkEvidence = (session?.benchmarkEvidence ?? []) as BenchmarkEvidence[];
+
+    const showFeedbackToast = (
+      message: string,
+      tone: "info" | "success" | "warn" = "info",
+    ) => {
+      const toast = document.getElementById("feedback-toast");
+      if (!toast) return;
+      toast.textContent = message;
+      toast.classList.remove("info", "success", "warn");
+      toast.classList.add("visible", tone);
+      if (toastTimeout) {
+        window.clearTimeout(toastTimeout);
+      }
+      toastTimeout = window.setTimeout(() => {
+        toast.classList.remove("visible");
+        toastTimeout = null;
+      }, 1600);
+    };
+
+    const resetFeedbackUiForNewRound = () => {
+      behaviorChoiceLocked = false;
+      feedbackSubmitLocked = false;
+      const up = document.getElementById("thumbs-up") as HTMLButtonElement | null;
+      const down = document.getElementById("thumbs-down") as HTMLButtonElement | null;
+      if (up) {
+        up.disabled = false;
+        up.classList.remove("selected");
+      }
+      if (down) {
+        down.disabled = false;
+        down.classList.remove("selected");
+      }
+      const submit = document.getElementById("submit-feedback") as HTMLButtonElement | null;
+      if (submit) {
+        submit.disabled = false;
+        submit.classList.remove("submitted");
+      }
+    };
 
     const evidenceByScenario = {
       financial: { trustworthyMass: 0.68, untrustworthyMass: 0.22, uncertaintyMass: 0.1 },
@@ -577,7 +619,7 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
 
       const payload = {
         participantId: null,
-        sessionId: `${scenarioKey}-session`,
+        sessionId: session?.sessionId ?? `${scenarioKey}-session`,
         interactionId,
         timestamp: new Date().toISOString(),
         benchmarkMetricRequest: benchmarkRequest,
@@ -710,13 +752,35 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
       const down = document.getElementById("thumbs-down");
       if (!up || !down) return;
       up.addEventListener("click", () => {
+        if (behaviorChoiceLocked) {
+          showFeedbackToast("Already recorded for this round.", "warn");
+          return;
+        }
+        behaviorChoiceLocked = true;
+        const upButton = up as HTMLButtonElement;
+        const downButton = down as HTMLButtonElement;
+        upButton.disabled = true;
+        downButton.disabled = true;
+        upButton.classList.add("selected");
         interactionState.adopted += 1;
         appendLog("Behavioral choice recorded: accept.");
+        showFeedbackToast("Recorded: Accept.", "success");
         syncAdoptionCounts(interactionState.adopted, interactionState.rejected);
       });
       down.addEventListener("click", () => {
+        if (behaviorChoiceLocked) {
+          showFeedbackToast("Already recorded for this round.", "warn");
+          return;
+        }
+        behaviorChoiceLocked = true;
+        const upButton = up as HTMLButtonElement;
+        const downButton = down as HTMLButtonElement;
+        upButton.disabled = true;
+        downButton.disabled = true;
+        downButton.classList.add("selected");
         interactionState.rejected += 1;
         appendLog("Behavioral choice recorded: reject.");
+        showFeedbackToast("Recorded: Reject.", "success");
         syncAdoptionCounts(interactionState.adopted, interactionState.rejected);
       });
     };
@@ -950,15 +1014,17 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
       },
     ) => {
       try {
+        const sessionId = session?.sessionId ?? null;
         const response = await fetch(`${chatBaseUrl}/chat/${scenario.key}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            sessionId,
             role,
             text,
             source,
             clientId,
-            taskId: activeTaskId,
+            taskId: activeTaskIdRef.current ?? activeTaskId,
             rating: meta?.rating ?? null,
             adopted: meta?.adopted ?? null,
             rejected: meta?.rejected ?? null,
@@ -994,6 +1060,7 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
       const sendMessage = () => {
         const value = input.value.trim();
         if (!value) return;
+        resetFeedbackUiForNewRound();
         appendChatBubble(container, "user", value);
         lastParticipantRequest = value;
         input.value = "";
@@ -1025,17 +1092,18 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
       if (!container) return null;
       const processMessage = (message: {
         id: number;
+        sessionId?: string;
         role: string;
         text: string;
         source: string;
         clientId?: string;
         timestamp: number;
         taskId?: string;
-      }) => {
+      }, includeSelf: boolean) => {
         if (message.id > lastChatId) {
           lastChatId = message.id;
         }
-        if (message.clientId && message.clientId === clientId) {
+        if (!includeSelf && message.clientId && message.clientId === clientId) {
           return;
         }
         if (message.source === "interaction_feedback") {
@@ -1057,10 +1125,15 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
       };
       const loadChatHistory = async () => {
         try {
-          const response = await fetch(`${chatBaseUrl}/chat/${scenario.key}`, { cache: "no-store" });
+          const sessionId = session?.sessionId ?? "";
+          const url = sessionId
+            ? `${chatBaseUrl}/chat/${scenario.key}?sessionId=${encodeURIComponent(sessionId)}`
+            : `${chatBaseUrl}/chat/${scenario.key}`;
+          const response = await fetch(url, { cache: "no-store" });
           if (!response.ok) return;
           const messages = (await response.json()) as Array<{
             id: number;
+            sessionId?: string;
             role: string;
             text: string;
             source: string;
@@ -1071,19 +1144,22 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
           messages
             .slice()
             .sort((a, b) => a.id - b.id)
-            .forEach(processMessage);
+            .forEach((message) => processMessage(message, true));
         } catch {
           // ignore history load errors
         }
       };
       const poll = async () => {
         try {
+          const sessionId = session?.sessionId ?? "";
+          const sessionParam = sessionId ? `&sessionId=${encodeURIComponent(sessionId)}` : "";
           const response = await fetch(
-            `${chatBaseUrl}/chat/${scenario.key}?afterId=${lastChatId}`,
+            `${chatBaseUrl}/chat/${scenario.key}?afterId=${lastChatId}${sessionParam}`,
           );
           if (!response.ok) return;
           const messages = (await response.json()) as Array<{
             id: number;
+            sessionId?: string;
             role: string;
             text: string;
             source: string;
@@ -1094,7 +1170,7 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
           messages
             .slice()
             .sort((a, b) => a.id - b.id)
-            .forEach(processMessage);
+            .forEach((message) => processMessage(message, false));
         } catch {
           // ignore polling errors
         }
@@ -1151,6 +1227,10 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
       const submit = document.getElementById("submit-feedback");
       if (!submit) return null;
       const onClick = () => {
+        if (feedbackSubmitLocked) {
+          showFeedbackToast("Feedback already submitted for this round.", "warn");
+          return;
+        }
         const reliability = readLikert("feedback-reliability");
         const predictability = readLikert("feedback-predictability");
         const selfConfidence = readLikert("feedback-self-confidence");
@@ -1163,6 +1243,7 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
           taskCriticality === null
         ) {
           appendLog("Please complete reliability, predictability, self-confidence, and criticality.");
+          showFeedbackToast("Complete required feedback fields first.", "warn");
           return;
         }
         postChatMessage("system", "", "interaction_feedback", {
@@ -1175,6 +1256,11 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
           taskComplexity,
         });
         appendLog("Feedback submitted to operator.");
+        feedbackSubmitLocked = true;
+        const submitButton = submit as HTMLButtonElement;
+        submitButton.disabled = true;
+        submitButton.classList.add("submitted");
+        showFeedbackToast("Feedback submitted.", "success");
       };
       submit.addEventListener("click", onClick);
       return () => {
@@ -1203,6 +1289,9 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
     toggleCueCards();
 
     return () => {
+      if (toastTimeout) {
+        window.clearTimeout(toastTimeout);
+      }
       if (chatPoll) {
         window.clearInterval(chatPoll);
       }
@@ -1450,6 +1539,7 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
                 Reject
               </button>
             </div>
+            <div id="feedback-toast" className="feedback-toast" role="status" aria-live="polite" />
             <div className="feedback-controls">
               <label>
                 Self-confidence (1-7)

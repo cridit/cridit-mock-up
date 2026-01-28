@@ -2,6 +2,7 @@ package cridit.observability;
 
 public record CalibrationHistoryEntry(
         String scenarioKey,
+        String sessionId,
         String taskId,
         String timestamp,
         double humanTrustScore,

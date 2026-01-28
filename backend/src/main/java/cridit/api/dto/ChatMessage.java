@@ -2,6 +2,7 @@ package cridit.api.dto;
 
 public class ChatMessage {
   public long id;
+  public String sessionId;
   public String role;
   public String text;
   public String source;

@@ -6,6 +6,8 @@ import {
   PreflightAnswers,
   SessionParams,
   commitNextSessionId,
+  generateClientId,
+  loadSession,
   peekNextSessionId,
   saveSession,
 } from "../../lib/session";
@@ -48,6 +50,7 @@ export default function PreflightScenarioPage() {
     : null;
 
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionIdFromBackend, setSessionIdFromBackend] = useState(false);
   const [backendBaseUrl] = useState(DEFAULT_BACKEND_URL);
   const [preflight, setPreflight] = useState<PreflightAnswers>({
     scenarioKey: scenarioKey ?? undefined,
@@ -109,7 +112,26 @@ export default function PreflightScenarioPage() {
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
-    setSessionId(peekNextSessionId());
+    const baseUrl = DEFAULT_BACKEND_URL.trim().replace(/\/$/, "");
+    const load = async () => {
+      try {
+        const response = await fetch(`${baseUrl}/cridit/session/next`, { cache: "no-store" });
+        if (!response.ok) {
+          throw new Error("session id unavailable");
+        }
+        const data = (await response.json().catch(() => null)) as { sessionId?: string } | null;
+        if (data?.sessionId && String(data.sessionId).trim()) {
+          setSessionId(String(data.sessionId).trim());
+          setSessionIdFromBackend(true);
+          return;
+        }
+      } catch {
+        // ignore and fall back to local counter
+      }
+      setSessionId(peekNextSessionId());
+      setSessionIdFromBackend(false);
+    };
+    load();
   }, []);
 
   useEffect(() => {
@@ -1280,6 +1302,7 @@ export default function PreflightScenarioPage() {
       threshold,
       adopted: 0,
       rejected: 0,
+      sessionId,
     });
     return { baselineMachine, threshold };
   };
@@ -1302,6 +1325,7 @@ export default function PreflightScenarioPage() {
     }
     await sendJSON(baseUrl, "/cridit/calibration/record", {
       scenarioKey,
+      sessionId,
       taskId: null,
       humanTrustScore: Number(score.toFixed(3)),
       machineTrustScore: Number(baselineMachine.toFixed(3)),
@@ -1321,7 +1345,7 @@ export default function PreflightScenarioPage() {
     setErrorMessage("");
     setSyncStatus("");
     const baseUrl = backendBaseUrl.trim().replace(/\/$/, "");
-    const payload = buildPayload();
+    const payload = { sessionId, ...buildPayload() };
     let response: {
       preflightScore: number;
       behaviorBaseRate: number;
@@ -1349,9 +1373,11 @@ export default function PreflightScenarioPage() {
       initialUncertainty: Number(response.initialUncertainty ?? 0),
       initialThreshold: Number(response.initialThreshold ?? scenario.threshold),
     };
+    const existingClientId = loadSession()?.clientId;
     saveSession({
       participantId: "",
       sessionId,
+      clientId: existingClientId ?? generateClientId(),
       domain: scenario.status,
       taskId: scenario.key,
       backendBaseUrl: baseUrl,
@@ -1372,7 +1398,9 @@ export default function PreflightScenarioPage() {
       setSyncStatus(`Operator sync failed: ${message}`);
     }
 
-    commitNextSessionId();
+    if (!sessionIdFromBackend) {
+      commitNextSessionId();
+    }
     router.push(`/scenario/${scenarioKey}`);
   };
 

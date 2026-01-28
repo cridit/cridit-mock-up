@@ -74,6 +74,7 @@ export type BenchmarkEvidence = {
 export type SessionData = {
   participantId: string;
   sessionId: string;
+  clientId?: string;
   domain: string;
   taskId: string;
   cueVisibility?: string;
@@ -90,6 +91,11 @@ export type SessionData = {
 const STORAGE_KEY = "cridit-session";
 const SESSION_COUNTER_KEY = "cridit-session-counter";
 const ADOPTION_HISTORY_KEY = "cridit-adoption-history";
+
+export const generateClientId = (): string =>
+  typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `client-${Math.random().toString(36).slice(2, 10)}`;
 
 export const loadSession = (): SessionData | null => {
   if (typeof window === "undefined") {
