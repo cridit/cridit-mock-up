@@ -24,6 +24,9 @@ public class SubjectiveLogic {
         if (report == null) {
             throw new NullPointerException("Feedback report is null");
         }
+        if (report.hasOpinion()) {
+            return new Opinion(report.getBelief(), report.getDisbelief(), report.getUncertainty(), report.getBaseRate());
+        }
         return getLikelihoodOpinion(report.getLikelihood(), report.getConfidence(), report.getBaseRate());
     }
 

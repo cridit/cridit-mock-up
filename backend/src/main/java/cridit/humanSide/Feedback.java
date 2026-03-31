@@ -2,6 +2,9 @@ package cridit.humanSide;
 
 public class Feedback {
     private static final double DEFAULT_PRIOR_WEIGHT = 2.0;
+    private static final double[] LIKELIHOOD_LEVELS = new double[]{0.05, 0.25, 0.5, 0.75, 0.95};
+    private static final double[] CONFIDENCE_LEVELS = new double[]{0.1, 0.3, 0.5, 0.7, 0.9};
+    private static final double[][][] QUALITATIVE_MATRIX = buildQualitativeMatrix();
 
     private final double positiveRate;
     private final double negativeRate;
@@ -60,22 +63,16 @@ public class Feedback {
         validateLikert(selfConfidence, "selfConfidence");
         validateLikert(taskCriticality, "taskCriticality");
 
-        double centeredReliability = reliability - 4.0;
-        double centeredPredictability = predictability - 4.0;
-        double likelihood = 0.5 + 0.2 * ((centeredReliability + centeredPredictability) / 6.0);
-
-        double selfConfidenceFactor = (selfConfidence - 1.0) / 6.0;
-        double consistency = 1.0 - 0.7 * (Math.abs(reliability - predictability) / 6.0);
-        double confidence = selfConfidenceFactor * consistency;
+        QualitativeLevel likelihoodLevel = mapLikertToLevel(roundedLikertAverage(reliability, predictability));
+        QualitativeLevel confidenceLevel = mapLikertToLevel(selfConfidence);
+        double[] opinion = qualitativeOpinion(likelihoodLevel, confidenceLevel);
 
         double criticalityCentered = (taskCriticality - 4.0) / 6.0;
         double baseRate = 0.5 - 0.3 * criticalityCentered;
 
-        likelihood = clamp(likelihood);
-        confidence = clamp(confidence);
         baseRate = clamp(baseRate);
 
-        return new Report(likelihood, confidence, baseRate);
+        return Report.fromOpinion(opinion[0], opinion[1], opinion[2], baseRate);
     }
 
     private static void validateUnit(double value, String name) {
@@ -116,11 +113,34 @@ public class Feedback {
         private final double likelihood;
         private final double confidence;
         private final double baseRate;
+        private final boolean hasOpinion;
+        private final double belief;
+        private final double disbelief;
+        private final double uncertainty;
 
         public Report(double likelihood, double confidence, double baseRate) {
             this.likelihood = likelihood;
             this.confidence = confidence;
             this.baseRate = baseRate;
+            this.hasOpinion = false;
+            this.belief = 0.0;
+            this.disbelief = 0.0;
+            this.uncertainty = 1.0;
+        }
+
+        private Report(double belief, double disbelief, double uncertainty, double baseRate, boolean hasOpinion) {
+            this.likelihood = 0.0;
+            this.confidence = 0.0;
+            this.baseRate = baseRate;
+            this.hasOpinion = hasOpinion;
+            this.belief = belief;
+            this.disbelief = disbelief;
+            this.uncertainty = uncertainty;
+        }
+
+        public static Report fromOpinion(double belief, double disbelief, double uncertainty, double baseRate) {
+            double[] normalized = normalizeOpinion(belief, disbelief, uncertainty);
+            return new Report(normalized[0], normalized[1], normalized[2], baseRate, true);
         }
 
         public double getLikelihood() {
@@ -134,5 +154,81 @@ public class Feedback {
         public double getBaseRate() {
             return baseRate;
         }
+
+        public boolean hasOpinion() {
+            return hasOpinion;
+        }
+
+        public double getBelief() {
+            return belief;
+        }
+
+        public double getDisbelief() {
+            return disbelief;
+        }
+
+        public double getUncertainty() {
+            return uncertainty;
+        }
+    }
+
+    private enum QualitativeLevel {
+        VERY_LOW,
+        LOW,
+        MEDIUM,
+        HIGH,
+        VERY_HIGH
+    }
+
+    private static QualitativeLevel mapLikertToLevel(int value) {
+        if (value <= 2) {
+            return QualitativeLevel.VERY_LOW;
+        }
+        if (value == 3) {
+            return QualitativeLevel.LOW;
+        }
+        if (value == 4) {
+            return QualitativeLevel.MEDIUM;
+        }
+        if (value == 5) {
+            return QualitativeLevel.HIGH;
+        }
+        return QualitativeLevel.VERY_HIGH;
+    }
+
+    private static int roundedLikertAverage(int left, int right) {
+        return (int) Math.round((left + right) / 2.0);
+    }
+
+    private static double[] qualitativeOpinion(QualitativeLevel likelihood, QualitativeLevel confidence) {
+        return QUALITATIVE_MATRIX[likelihood.ordinal()][confidence.ordinal()];
+    }
+
+    private static double[][][] buildQualitativeMatrix() {
+        double[][][] matrix = new double[5][5][3];
+        for (int i = 0; i < LIKELIHOOD_LEVELS.length; i++) {
+            double likelihood = LIKELIHOOD_LEVELS[i];
+            for (int j = 0; j < CONFIDENCE_LEVELS.length; j++) {
+                double confidence = CONFIDENCE_LEVELS[j];
+                double belief = confidence * likelihood;
+                double disbelief = confidence * (1.0 - likelihood);
+                double uncertainty = 1.0 - confidence;
+                matrix[i][j][0] = belief;
+                matrix[i][j][1] = disbelief;
+                matrix[i][j][2] = uncertainty;
+            }
+        }
+        return matrix;
+    }
+
+    private static double[] normalizeOpinion(double belief, double disbelief, double uncertainty) {
+        validateUnit(belief, "belief");
+        validateUnit(disbelief, "disbelief");
+        validateUnit(uncertainty, "uncertainty");
+        double sum = belief + disbelief + uncertainty;
+        if (sum == 0.0) {
+            return new double[]{0.0, 0.0, 1.0};
+        }
+        return new double[]{belief / sum, disbelief / sum, uncertainty / sum};
     }
 }

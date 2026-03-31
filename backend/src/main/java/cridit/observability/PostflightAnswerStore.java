@@ -20,7 +20,7 @@ public class PostflightAnswerStore {
     public PostflightAnswerStore(
             ObjectMapper objectMapper,
             @ConfigProperty(name = "cridit.postflight.answers.path",
-                    defaultValue = "target/cridit-postflight-answers.jsonl")
+                    defaultValue = "src/main/resources/cridit-postflight-answers.jsonl")
             String answersPath
     ) {
         this.objectMapper = objectMapper;

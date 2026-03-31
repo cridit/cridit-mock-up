@@ -8,6 +8,7 @@ import cridit.api.dto.request.workflow.CalibrationRecordRequest;
 import cridit.api.dto.request.workflow.PostflightRequest;
 import cridit.api.dto.request.machine.TrustEventRequest;
 import cridit.api.dto.response.machine.MachineTrustEventResponse;
+import cridit.api.dto.response.SessionIdResponse;
 import cridit.calibration.Calibration;
 import cridit.calibration.TrustCues;
 import cridit.machineSide.Evidence;
@@ -23,6 +24,7 @@ import cridit.observability.CalibrationHistoryEntry;
 import cridit.observability.CalibrationHistoryStore;
 import cridit.observability.PostflightAnswerStore;
 import cridit.observability.PreflightAnswerStore;
+import cridit.observability.SessionIdService;
 
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
@@ -53,6 +55,9 @@ public class CRiDiTController {
 
     @Inject
     PostflightAnswerStore postflightAnswerStore;
+
+    @Inject
+    SessionIdService sessionIdService;
 
     @Inject
     MachineTrustEventService machineTrustEventService;
@@ -124,6 +129,7 @@ public class CRiDiTController {
             success = true;
             calibrationHistoryStore.record(
                     resolveScenarioKey(trustCuesRequest),
+                    trustCuesRequest.sessionId(),
                     trustCuesRequest.taskId(),
                     trustCues,
                     conflictRedistribution,
@@ -148,6 +154,7 @@ public class CRiDiTController {
         }
         calibrationHistoryStore.recordManual(
                 scenarioKey,
+                request.sessionId(),
                 request.taskId(),
                 request.humanTrustScore(),
                 request.machineTrustScore(),
@@ -165,6 +172,12 @@ public class CRiDiTController {
     @Path("/postflight")
     public void submitPostflight(PostflightRequest request) {
         postflightAnswerStore.record(request);
+    }
+
+    @GET
+    @Path("/session/next")
+    public SessionIdResponse nextSessionId() {
+        return new SessionIdResponse(sessionIdService.nextSessionId());
     }
 
     @GET

@@ -16,6 +16,14 @@ type TrustCuesPayload = {
     adoptionBaseRate: number;
     feedbackBaseRate: number;
   };
+  benchmarkMetricRequest?: {
+    evidenceSet: {
+      evidenceKey: string;
+      trustworthyMass: number;
+      untrustworthyMass: number;
+      uncertaintyMass: number;
+    }[];
+  };
   error?: number;
   risk?: number;
   initialThreshold?: number | null;
@@ -218,6 +226,18 @@ export const mockCalibration = (payload: TrustCuesPayload): TrustCuesResponse =>
   const risk = payload.risk ?? 0.25;
   const roundFactor = payload.roundIndex ? payload.roundIndex * 0.015 : 0;
   const machineTrust = clamp(0.72 - error * 0.3 - risk * 0.25 - roundFactor, 0.15, 0.9);
+  const evidenceSet = payload.benchmarkMetricRequest?.evidenceSet ?? [];
+  const uncertaintyMass =
+    evidenceSet.length > 0
+      ? clamp(
+          evidenceSet.reduce((sum, item) => sum + item.uncertaintyMass, 0) /
+            evidenceSet.length,
+          0,
+          1,
+        )
+      : 0.2;
+  const belief = clamp(machineTrust - 0.5 * uncertaintyMass, 0, 1);
+  const plausibility = clamp(machineTrust + 0.5 * uncertaintyMass, 0, 1);
 
   const thresholdBase = payload.initialThreshold ?? 0.12;
   const threshold = clamp(
@@ -252,8 +272,8 @@ export const mockCalibration = (payload: TrustCuesPayload): TrustCuesResponse =>
     adaptationApplied: decision === "ADAPT SYSTEM",
     cueAdoptionScore: Number(clamp(0.5 + gap, 0.1, 0.9).toFixed(3)),
     cueAdoptionMode: "accurate",
-    belief: Number(machineTrust.toFixed(3)),
-    plausibility: Number(clamp(machineTrust + 0.18, 0, 1).toFixed(3)),
+    belief: Number(belief.toFixed(3)),
+    plausibility: Number(plausibility.toFixed(3)),
     riskLevel: risk > 0.5 ? "high" : risk > 0.3 ? "medium" : "low",
     decisionConfidence: Number(clamp(0.55 + Math.abs(gap), 0.5, 0.9).toFixed(3)),
     systemAdaptationSummary:

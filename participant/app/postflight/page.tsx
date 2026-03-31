@@ -187,6 +187,7 @@ export default function PostflightPage() {
     const payload = {
       sessionId: session.sessionId,
       participantId: session.participantId || null,
+      scenarioKey: session.taskId || null,
       conflictRedistribution: "pcr5",
       benchmarkMetricRequest: {
         evidenceSet: [],

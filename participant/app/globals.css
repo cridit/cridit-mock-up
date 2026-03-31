@@ -608,6 +608,47 @@ body {
   cursor: pointer;
 }
 
+.thumbs button.selected {
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.35);
+  transform: translateY(-1px);
+}
+
+.thumbs button:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+
+#submit-feedback.submitted {
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.25);
+}
+
+.feedback-toast {
+  margin: 8px 0 0;
+  min-height: 18px;
+  font-size: 0.85rem;
+  color: var(--muted);
+  opacity: 0;
+  transform: translateY(-2px);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.feedback-toast.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.feedback-toast.success {
+  color: rgba(15, 118, 110, 0.95);
+}
+
+.feedback-toast.warn {
+  color: rgba(180, 73, 63, 0.95);
+}
+
+.feedback-toast.info {
+  color: var(--muted);
+}
+
 .primary {
   background: var(--teal);
   color: var(--white);

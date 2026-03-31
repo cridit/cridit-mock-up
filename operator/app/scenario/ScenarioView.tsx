@@ -346,6 +346,7 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
     let inputPoll: number | null = null;
     let lastChatId = 0;
     let currentTaskId: string | null = null;
+    let activeSessionId: string | null = null;
 
     const interactionState = {
       adopted: 0,
@@ -682,6 +683,7 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
           : "NO ACTION";
       const payload = {
         scenarioKey,
+        sessionId: activeSessionId,
         taskId: selectedTaskRef.current ?? null,
         humanTrustScore: hasScores ? Number(human.toFixed(3)) : null,
         machineTrustScore: hasScores ? Number(machine.toFixed(3)) : null,
@@ -778,7 +780,7 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
 
       const payload = {
         participantId: null,
-        sessionId: `${scenarioKey}-session`,
+        sessionId: activeSessionId ?? `${scenarioKey}-session`,
         interactionId: `interaction-${Date.now()}`,
         timestamp: new Date().toISOString(),
         benchmarkMetricRequest: {
@@ -983,13 +985,16 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
           const response = await fetch(`${chatBaseUrl}/inputs/${scenarioKey}`, { cache: "no-store" });
           if (!response.ok) return;
           const data = (await response.json().catch(() => null)) as
-            | { adopted?: number; rejected?: number }
+            | { adopted?: number; rejected?: number; sessionId?: string }
             | null;
           if (typeof data?.adopted === "number") {
             adoptedInput.value = String(Math.max(0, Math.round(data.adopted)));
           }
           if (typeof data?.rejected === "number") {
             rejectedInput.value = String(Math.max(0, Math.round(data.rejected)));
+          }
+          if (data?.sessionId && String(data.sessionId).trim()) {
+            activeSessionId = String(data.sessionId).trim();
           }
         } catch {
           // ignore input sync errors
@@ -1015,7 +1020,7 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            sessionId: `${scenarioKey}-session`,
+            sessionId: activeSessionId ?? `${scenarioKey}-session`,
             scenarioKey,
             domain: scenarioKey,
             baselineScore: scenarioRef.current.baselineMachine,
@@ -1311,6 +1316,7 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            sessionId: activeSessionId,
             role,
             text,
             source,
@@ -1361,6 +1367,7 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
       if (!container) return null;
       const processMessage = (message: {
         id: number;
+        sessionId?: string;
         role: string;
         text: string;
         source: string;
@@ -1374,11 +1381,11 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
         taskComplexity?: number | null;
         adopted?: number | null;
         rejected?: number | null;
-      }) => {
+      }, includeSelf: boolean) => {
         if (message.id > lastChatId) {
           lastChatId = message.id;
         }
-        if (message.clientId && message.clientId === clientId) {
+        if (!includeSelf && message.clientId && message.clientId === clientId) {
           return;
         }
         if (message.source === "interaction_feedback") {
@@ -1429,10 +1436,14 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
       };
       const loadChatHistory = async () => {
         try {
-          const response = await fetch(`${chatBaseUrl}/chat/${scenarioKey}`, { cache: "no-store" });
+          const sessionParam = activeSessionId ? `?sessionId=${encodeURIComponent(activeSessionId)}` : "";
+          const response = await fetch(`${chatBaseUrl}/chat/${scenarioKey}${sessionParam}`, {
+            cache: "no-store",
+          });
           if (!response.ok) return;
           const messages = (await response.json()) as Array<{
             id: number;
+            sessionId?: string;
             role: string;
             text: string;
             source: string;
@@ -1450,19 +1461,21 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
           messages
             .slice()
             .sort((a, b) => a.id - b.id)
-            .forEach(processMessage);
+            .forEach((message) => processMessage(message, true));
         } catch {
           // ignore history load errors
         }
       };
       const poll = async () => {
         try {
+          const sessionParam = activeSessionId ? `&sessionId=${encodeURIComponent(activeSessionId)}` : "";
           const response = await fetch(
-            `${chatBaseUrl}/chat/${scenarioKey}?afterId=${lastChatId}`,
+            `${chatBaseUrl}/chat/${scenarioKey}?afterId=${lastChatId}${sessionParam}`,
           );
           if (!response.ok) return;
           const messages = (await response.json()) as Array<{
             id: number;
+            sessionId?: string;
             role: string;
             text: string;
             source: string;
@@ -1480,7 +1493,7 @@ export function ScenarioView({ scenario, isOperator, backendUrl }: ScenarioViewP
           messages
             .slice()
             .sort((a, b) => a.id - b.id)
-            .forEach(processMessage);
+            .forEach((message) => processMessage(message, false));
         } catch {
           // ignore polling errors
         }

@@ -27,7 +27,7 @@ public class CalibrationHistoryStore {
     public CalibrationHistoryStore(
             ObjectMapper objectMapper,
             @ConfigProperty(name = "cridit.calibration.history.path",
-                    defaultValue = "target/cridit-calibration-history.jsonl")
+                    defaultValue = "src/main/resources/cridit-calibration-history.jsonl")
             String historyPath
     ) {
         this.objectMapper = objectMapper;
@@ -35,6 +35,7 @@ public class CalibrationHistoryStore {
     }
 
     public void record(String scenarioKey,
+                       String sessionId,
                        String taskId,
                        TrustCues trustCues,
                        String conflictRedistribution,
@@ -45,6 +46,7 @@ public class CalibrationHistoryStore {
                 : timestamp;
         CalibrationHistoryEntry entry = new CalibrationHistoryEntry(
                 scenarioKey,
+                sessionId,
                 taskId,
                 resolvedTimestamp,
                 round3(trustCues.humanTrustScore()),
@@ -61,6 +63,7 @@ public class CalibrationHistoryStore {
     }
 
     public void recordManual(String scenarioKey,
+                             String sessionId,
                              String taskId,
                              Double humanTrustScore,
                              Double machineTrustScore,
@@ -76,6 +79,7 @@ public class CalibrationHistoryStore {
                 : timestamp;
         CalibrationHistoryEntry entry = new CalibrationHistoryEntry(
                 scenarioKey,
+                sessionId,
                 taskId,
                 resolvedTimestamp,
                 round3(humanTrustScore == null ? 0.0 : humanTrustScore),

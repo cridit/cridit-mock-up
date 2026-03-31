@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 
 public record PreflightRequest(
+        String sessionId,
         @JsonAlias({"scenario", "domain"}) String scenarioKey,
         @Min(1) @Max(7) Integer intentionToTrustPerformance,
         @Min(1) @Max(7) Integer intentionToTrustIntention,
